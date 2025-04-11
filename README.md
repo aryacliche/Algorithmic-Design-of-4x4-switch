@@ -1,8 +1,13 @@
 # How to attack this assignment
 1. We will first study the way that the 2x2 switch works. Using that information, we can devise the 4x4 one as well : `DONE`
-2. Then we understand the way the C code for it works
-3. Write the C code for the 4x4 case
-4. Convert the C code into Aa code
+2. Then we understand the way the C code for it works : `DONE`
+3. Write the C code for the 4x4 case : `DONE`
+4. Convert the C code into Aa code : `DOING`
+	1. Output Daemon : `Remaining`
+	2. Input Daemon : `DONE`
+	3. Decls : `DONE`
+	4. Utils : `Remaining` (to hasten our experimentation we can make an unfair arbiter for now. Let's just do that for now and see if things are breaking apart from the seams.)
+	5. Main : `DONE` 
 5. Understand and convert the testbench
 6. Understand how the entire set of build scripts, Makefiles etc... work together to make a system that is able to talk to each other
 # Input Daemon
@@ -43,8 +48,33 @@ This is written by tweaking the C code provided for the 2x2 switch case.
 
 # Output Daemon
 ## Pseudo Code
+>[!tldr] Arbiter Logic
+>Before we look at the Pseudo code, it is important to understand how the arbiter decides which buffer to forward to the output port,
+>1. In case a packet is currently being processed (i.e. you have not finished all words in that packet), compulsorily use that packet. This means that even if the associated buffer is empty, we choose it indefinitely.
+>2. If we have just finished a packet, we have an internal "semaphore" (called `priority`) that tracks the last used buffer. It prefers choosing a buffer apart from the last-used one.
+>	- If `priority` is high for a buffer AND the first word in that buffer is valid, we will choose that as the next buffer in question.
+>	- We only choose a buffer with lesser priority if the higher priority buffer has an invalid word in it.
+>1. Once we make the decision of which buffer to use, we change the priority buffer via rotation.
+
+**Note** : Priority is no longer a simple boolean value or even a pointer. We need to maintain counters to keep track of the history. In order to achieve this, we will maintain a set of counters for each of the 4 output buffers available to each output daemon,
+- Whenever we choose a 
+
 The Pseudo-code for the output daemon is,
-1. 
+1. Start with `down_counter = active_packet = inputs = 0`. Choose an arbitrary priority order 
+2. 
+
+2. We mark each of the buffers with a `ready` signal which is `True` if any of the following holds:
+	- `down_counter == 0` : We finished the current packet and are looking forward for the next one
+	- `active_packet == i` : This is true only when `down_counter != 0`  since we are still executing a single packet and it happens to be from the same buffer as we are looking at.
+	- `!pkt_i_waiting` : No fucking clue what this is
+3. We do non-blocking reads from each of buffers whose `ready` signal is SET.
+4. Based on the values of `active_packet`, `down_counter` and `pkt_i_has_priority` we are able to decide
+	- `next_active_packet` : It changes from `active_packet` only if `down_counter == 0` i.e. we have finished the current packet. Else stays the same.
+	- `next_pkt_i_has_priority` : This is a fairness measure. It ensures that we prioritise a buffer apart from the one were prioritising in the last packet if possible.
+5. If `down_counter == 0` (i.e. we are now working with a new packet), we just make it into `length_of_next_active_packet - 1`. Else, if the buffer corresponding to the `active_packet` is not having valid data, we maintain the value of `down_counter`. In case of valid data, we will decrement it.
+6. In case, we actually are able to get valid data from the buffer just selected by the arbiter, we will update the value of `next_active_packet_length`. Else, we keep it as is.
+7. We then update `next_pkt_i_waiting`:
+	- If `active_packet` (i.e. the buffer used by the last packet) is `i`, 
 ### C-style Pseudo Code
 ```c
 pkt_1_waiting = 0;
@@ -54,16 +84,16 @@ down_counter = 0;
 active_packet = 0;
 while(1)
 {
-     read_from_1 = (!pkt_1_waiting || 
+     obuf_1_ready = (!pkt_1_waiting || 
                            (down_counter == 0) || (active_packet == 1))
-     read_from_2 = (!pkt_2_waiting || 
+     obuf_2_ready = (!pkt_2_waiting || 
                            (down_counter == 0) || (active_packet == 2))
-	if(read_from_1)
+	if(obuf_1_ready)
 	{
 		// NOTE: must be non-blocking read..  why?
 		pkt_1_word = obuf_1_1
 	}
-     if(read_from_2)
+     if(obuf_2_ready)
 	{
 		// NOTE: must be non-blocking read..  why?
 		pkt_2_word = obuf_2_1

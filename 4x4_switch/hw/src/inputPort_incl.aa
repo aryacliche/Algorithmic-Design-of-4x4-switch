@@ -45,7 +45,7 @@ $module [ ##INPUTPORTDAEMON ]
 
 			$merge $entry $loopback 
 				$phi count_down   := 
-						($bitcast ($uint<16>) 0) $on $entry
+						ZERO_8 $on $entry
 							next_count_down $on $loopback
 				$phi input_word   := ##INPUT_PORT $on $entry, $loopback
 				$phi last_dest_id :=  0 $on $entry next_last_dest_id
@@ -76,14 +76,22 @@ $module [ ##INPUTPORTDAEMON ]
 			$volatile data_to_outport := ($concat ONE_1 input_word)
 
 			$volatile send_to_1 := (next_last_dest_id == 1)
+			$volatile send_to_2 := (next_last_dest_id == 2)
+			$volatile send_to_3 := (next_last_dest_id == 3)
+			$volatile send_to_4 := (next_last_dest_id == 4)
 			$guard (send_to_1)
 				##NOBLOCKOBUF_TO_1 := data_to_outport
 
-			$volatile send_to_2 := (next_last_dest_id == 2)
 			$guard (send_to_2)
 				##NOBLOCKOBUF_TO_2 := data_to_outport
+
+			$guard (send_to_3)
+				##NOBLOCKOBUF_TO_3 := data_to_outport
+
+			$guard (send_to_4)
+				##NOBLOCKOBUF_TO_4 := data_to_outport
 			
-			$rreport ( ##INPUTPORTDAEMON   write_status send_to_1 send_to_2 data_to_outport new_packet 
+			$rreport ( ##INPUTPORTDAEMON   write_status send_to_1 send_to_2 send_to_3 send_to_4 data_to_outport new_packet 
 						last_dest_id next_last_dest_id count_down)
 
 		$while 1

@@ -19,9 +19,9 @@ $module [ ##OUTPUTPORTDAEMON ]
 		// while(1)
 		// {
 		//      read_from_1 = (!pkt_1_waiting || 
-		//                            ((down_counter == 0) || (active_packet == 1))
+		//                            ((down_counter == 0) || (active_packet == 1)))
 		//      read_from_2 = (!pkt_2_waiting || 
-		//                            ((down_counter == 0) || (active_packet == 2))
+		//                            ((down_counter == 0) || (active_packet == 2)))
 		//	if(read_from_1)
 		//	{
 		//		// NOTE: must be non-blocking read..  why?
@@ -81,34 +81,41 @@ $module [ ##OUTPUTPORTDAEMON ]
 				$phi down_counter := 
 					ZERO_8 $on $entry next_down_counter $on $loopback
 
-				// pkt_1_e_word is the word that we will read from the
-				// first input queue "now".  Note we may not read from
+				// pkt_i_e_word is the word that we will read from the
+				// ith input queue "now".  Note we may not read from
 				// the queue.
 				$phi pkt_1_e_word := 
 					ZERO_33 $on $entry 
 						$guard (read_from_1) 
 							##NOBLOCKOBUF_FROM_1  $on $loopback
 
-				// pkt_2_e_word is the word that we will read from the
-				// second input queue "now".  Note we may not read from
-				// the queue.
 				$phi pkt_2_e_word := 
 					ZERO_33 $on $entry 
 						$guard (read_from_2) 
 							##NOBLOCKOBUF_FROM_2  $on $loopback
+
+				$phi pkt_3_e_word := 
+					ZERO_33 $on $entry 
+						$guard (read_from_3) 
+							##NOBLOCKOBUF_FROM_3  $on $loopback
+
+				$phi pkt_4_e_word := 
+					ZERO_33 $on $entry 
+						$guard (read_from_4) 
+							##NOBLOCKOBUF_FROM_4  $on $loopback
 
 				//
 				// this tells you which is the currently active packet..
 				//  (being sent out)
 				//
 				$phi active_packet := 
-					ZERO_2 $on $entry next_active_packet $on $loopback
+					ZERO_3 $on $entry next_active_packet $on $loopback
 				$phi active_packet_length :=
 					ZERO_8 $on $entry next_active_packet_length $on $loopback
 
-				// Does pkt 1 have priority?
-				$phi pkt_1_has_priority := 
-					ZERO_1 $on $entry next_pkt_1_has_priority $on $loopback
+				// priority_index points to the buffer with high priority
+					$phi priority_index := 
+						ZERO_3 $on $entry next_priority_index $on $loopback
 
 			$endmerge
 
@@ -117,6 +124,8 @@ $module [ ##OUTPUTPORTDAEMON ]
 			//
 			$volatile p1_valid := (pkt_1_e_word [] 32)
 			$volatile p2_valid := (pkt_2_e_word [] 32)
+			$volatile p3_valid := (pkt_3_e_word [] 32)
+			$volatile p4_valid := (pkt_4_e_word [] 32)
 
 			//
 			// This report statement is useful in debugging.
@@ -125,11 +134,15 @@ $module [ ##OUTPUTPORTDAEMON ]
 					state_summary 
 						active_packet
 						down_counter
-						pkt_1_has_priority
+						priority_index
 						read_from_1 
 						pkt_1_e_word 
 						read_from_2
 						pkt_2_e_word
+						read_from_3 
+						pkt_3_e_word 
+						read_from_4 
+						pkt_4_e_word 
 				)
 
 			//
@@ -138,17 +151,19 @@ $module [ ##OUTPUTPORTDAEMON ]
 			$volatile valid_active_pkt_word_read :=
 				($excmux 
 					(active_packet == 1) p1_valid
-					(active_packet == 2) p2_valid)
+					(active_packet == 2) p2_valid
+					(active_packet == 3) p3_valid
+					(active_packet == 4) p4_valid)
 
 			//
 			// priority select comes into play only when
 			//  1. either there is no active packet.
 			// OR
 			//  2. an active packet has finished.
-			//
+			// FIXME: This isn't a trivial problem to solve. The arbiter will have to be smarter.
 			$volatile $call prioritySelect 
-					   (down_counter active_packet pkt_1_has_priority p1_valid p2_valid)
-							(next_active_packet next_pkt_1_has_priority)
+					   (down_counter active_packet priority_index p1_valid p2_valid p3_valid p4_valid)
+							(next_active_packet next_priority_index)
 
 			//
 			// started_new_packet means the obvious
@@ -157,10 +172,15 @@ $module [ ##OUTPUTPORTDAEMON ]
 				((next_active_packet != 0) & (down_counter == 0))
 			$volatile next_active_packet_length :=
 					($mux started_new_packet 
-						($mux (next_active_packet == 1)
+						($mux (next_active_packet > 2)
+							($mux (next_active_packet == 1)
 								// keep 8 bits.
 								($slice pkt_1_e_word 15 8)
 								($slice pkt_2_e_word 15 8))
+							($mux (next_active_packet == 3)
+								// keep 8 bits.
+								($slice pkt_3_e_word 15 8)
+								($slice pkt_4_e_word 15 8)))
 						active_packet_length)
 								
 							
@@ -180,7 +200,7 @@ $module [ ##OUTPUTPORTDAEMON ]
 			//      or     packet from 1 is in progress but down-count is not zero.
 			//
 			//  ($reduce | a b c)  is the same as ((a | b) | c)
-			//
+			// FIXME: I have no clue how this logic works
 			$volatile read_from_1 := 
 				($reduce |
 					(~p1_valid)
@@ -191,24 +211,41 @@ $module [ ##OUTPUTPORTDAEMON ]
 					(~p2_valid)  		
 					(next_active_packet == 2))
 
+			$volatile read_from_3 := 
+				($reduce |
+					(~p3_valid)  		
+					(next_active_packet == 3))
+
+			$volatile read_from_4 := 
+				($reduce |
+					(~p4_valid)  		
+					(next_active_packet == 4))
+
 			// send to output port.
-			$volatile data_to_out := ($mux (next_active_packet == 1) 
-								($slice pkt_1_e_word 31 0)
-								($slice pkt_2_e_word 31 0))
+			$volatile data_to_out := ($mux (next_active_packet > 2)
+										($mux (next_active_packet == 1) 
+											($slice pkt_1_e_word 31 0)
+											($slice pkt_2_e_word 31 0))
+										($mux (next_active_packet == 3) 
+											($slice pkt_3_e_word 31 0)
+											($slice pkt_4_e_word 31 0))
+									)
 
 			//
 			// to send data you must have valid data.
 			//
 			$volatile send_flag := ($excmux 
 							(next_active_packet == 1) p1_valid 
-							(next_active_packet == 2) p2_valid )
+							(next_active_packet == 2) p2_valid 
+							(next_active_packet == 3) p3_valid 
+							(next_active_packet == 4) p4_valid )
 						
 			// send if necessary..
 			$guard (send_flag)
 				##OUTPUT_PORT := data_to_out
 
 			$rreport ( ##OUTPUTPORTDAEMON 
-						send_information started_new_packet next_active_packet send_flag p1_valid p2_valid data_to_out)
+						send_information started_new_packet next_active_packet send_flag p1_valid p2_valid p3_valid p4_valid data_to_out)
 	
 		$while 1
 	}
