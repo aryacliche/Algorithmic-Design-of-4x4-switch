@@ -1,0 +1,201 @@
+What are the options?
+
+	- Monolithic
+		One super-module which implements all the
+		functionality.
+
+		Checks the input pipes, stores into 
+		output buffers, does fair arbitration
+		and sends out to the output pipes.
+
+
+	- 4 modules
+		2x input handlers
+		2x output handlers.
+
+
+	- 2 modules
+		1 for input-side handling
+		1 for output-side handling
+
+
+	???
+
+
+How will we decide?
+
+   From a programmer's point of view:
+
+	Ease of debugging
+
+		Easiest is monolithic
+			single thread??
+
+
+	Abstraction
+		
+		Divide and conquer... break the problem into
+		smaller problems.
+
+
+   From a end-user point of view:
+
+	Correctness!
+
+	Performance!!
+
+	Price/Performance!!
+
+	Utilization!
+
+	Monolithic may be inefficient??
+	Decoupling may be beneficial?
+
+		4 module solution may give
+		best performance?
+
+
+MPD decision
+
+	- 4 modules
+		2x input handlers
+		2x output handlers.
+
+
+The input module (input_demux agent)
+
+	will look like this 
+
+	while(1) {
+		P = getInputPacket()
+		forwardInputPacketToQueue(P);
+	}
+
+	when this is mapped to hardware, we
+	want to get a pipeline.
+
+
+How fast would you like this to run?
+
+    -->  pipeline -->
+
+    one iteration every clock cycle
+    -------------------------------
+
+    11111111111
+     22222222222
+      33333333333
+       44444444444
+
+    We saw that we should be able to achieve this?
+
+
+Performance/Cost etc  --   Utilization
+-----------------------------------------
+
+
+      C V^2 F
+
+	C is correlated with area
+        V is determined by performance requirements
+        F is determined by performance requirements.
+
+	V, F are determined together.
+
+ 	If A  and B are two solutions with 
+
+		A fullrate
+		B halfrate
+
+
+        CA   approx equals CB
+        VA      approx      0.5 * VB
+	FA      approx      0.5 * FB
+       
+Power dissipation in A 1/8 of B.
+
+	For B to match A, you will need
+        either 8x the power or 2x the area and 2x power
+
+	For A to match B, you will need 1/8 the
+        power 
+
+
+Utilization
+
+	Problem requires 100 additions
+	You have 1 adder
+	Your adder utilization is 100%
+                                                time-taken = 100
+
+        Your adder utilization is 50%          
+                                                time-taken = 200
+
+	Performance is directly proportional to utilization.
+
+
+	`Typically a good design has > 50% utilization
+	-------------------------------------------------
+
+
+
+locally optimal does not mean globally optimal
+------------------------------------------------
+
+         --> FAST --> SLOW -->
+
+	     slow down FAST by reducing resources
+ 		NOT BY REDUCING UTILIZATION
+
+	--> SLOWED  --> SLOW --->
+            reduce V
+            reduce F
+
+
+But UTILIZATION is always important (it is the key).
+
+	Bad algorithms are not tolerated....
+
+	A    bubble sort
+		100% utilization
+
+	B    merge sort.
+		50% utilization
+
+
+        which one will win?
+
+
+Choose a good algorithm and implement it with high utilization
+---------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

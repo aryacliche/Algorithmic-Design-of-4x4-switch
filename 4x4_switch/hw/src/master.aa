@@ -1,0 +1,26 @@
+#define INPUTPORTDAEMON   inputPort_1_Daemon
+#define INPUT_PORT	  in_data_1
+#define NOBLOCKOBUF_TO_1  noblock_obuf_1_1
+#define NOBLOCKOBUF_TO_2  noblock_obuf_1_2
+#include inputPort_incl.aa
+
+#define INPUTPORTDAEMON   inputPort_2_Daemon
+#define INPUT_PORT	  in_data_2
+#define NOBLOCKOBUF_TO_1  noblock_obuf_2_1
+#define NOBLOCKOBUF_TO_2  noblock_obuf_2_2
+#include inputPort_incl.aa
+
+
+#define OUTPUTPORTDAEMON   outputPort_1_Daemon
+#define NOBLOCKOBUF_FROM_1 noblock_obuf_1_1
+#define NOBLOCKOBUF_FROM_2 noblock_obuf_2_1
+#define OUTPUT_PORT	   out_data_1
+#include outputPort_incl.aa
+
+#define OUTPUTPORTDAEMON   outputPort_2_Daemon
+#define NOBLOCKOBUF_FROM_1 noblock_obuf_1_2
+#define NOBLOCKOBUF_FROM_2 noblock_obuf_2_2
+#define OUTPUT_PORT	   out_data_2
+#include outputPort_incl.aa
+
+

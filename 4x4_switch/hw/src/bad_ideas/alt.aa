@@ -1,0 +1,46 @@
+
+// alternative way of writing Aa which is close to C
+
+
+//
+// This will be assigned twice.
+//
+$storage last_dest_id : $uint<8>
+$storage count_down   : $uint<8>
+
+
+last_dest_id := 0
+------------------
+count_down   := 0
+------------------
+$branchblock[loop] {
+   $dopipeline $depth 7 $fullrate ...
+	$merge $entry $loopback $endmerge
+
+	input_word := in_data_1
+	$volatile new_packet := (count_down == 0)
+			
+	$volatile $split (input_word 8 16 8)
+			(dest_id pkt_length seq_id)
+
+	count_down := ($mux new_packet (pkt_length - 1) (count_down - 1))
+	------------------------------------------------------------------
+
+	last_dest_id := ($mux new_packet dest_id last_dest_id)
+	----------------------------------------------------------
+
+	// add valid bit for noblock.
+	$volatile data_to_outport := ($concat ONE_1 input_word)
+
+	$volatile send_to_1 := (next_last_dest_id == 1)
+	$guard (send_to_1)
+		obuf_1_1 := data_to_outport
+
+	$volatile send_to_2 := (next_last_dest_id == 2)
+	$guard (send_to_2)
+		obuf_1_2 := data_to_outport
+
+   $while 1
+
+}
+

@@ -1,0 +1,23 @@
+build_ghdl_model.sh
+	compile ghdl sim of generated vhdl.
+
+build_ghdl_tb.sh
+	compile ghdl test bench
+
+build.sh
+	build the hw, ghdl model and testbench
+
+clean.sh
+	clean p
+
+hw/
+	switch Aa description and compile script.
+
+obj_vhdl/
+	object cod
+
+testbench/
+	testbench!
+
+bin/
+	testbench_vhdl

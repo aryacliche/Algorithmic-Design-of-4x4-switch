@@ -1,0 +1,33 @@
+$volatile $module [prioritySelect]
+	$in (down_counter: $uint<8> active_packet: $uint<2>
+			pkt_1_has_priority p1_valid p2_valid: $uint<1>) 
+	$out (next_active_packet: $uint<2> next_pkt_1_has_priority: $uint<1>)
+$is
+//
+// if down_counter is 0, then it is time to decide which should be
+// the new active packet.
+{
+	d0 := (down_counter == 0)
+	select_1 := 
+		($reduce & 
+			d0
+			p1_valid
+			(pkt_1_has_priority | (~p2_valid)))
+	select_2 := 
+		($reduce & 
+			d0
+			p2_valid
+			((~pkt_1_has_priority) | (~p1_valid)))
+
+	next_active_packet := ($excmux 
+					(~d0)	active_packet 
+					select_1 1
+					select_2 2
+				)
+
+	// priority rotates on every selection.
+	next_pkt_1_has_priority := ($mux (select_1 | select_2) 
+						(~pkt_1_has_priority)
+						pkt_1_has_priority)
+}
+
