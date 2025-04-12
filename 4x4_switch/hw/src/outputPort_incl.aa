@@ -115,7 +115,7 @@ $module [ ##OUTPUTPORTDAEMON ]
 
 				// priority_index points to the buffer with high priority
 					$phi priority_index := 
-						ZERO_3 $on $entry next_priority_index $on $loopback
+						ZERO_2 $on $entry next_priority_index $on $loopback
 
 			$endmerge
 
@@ -160,7 +160,7 @@ $module [ ##OUTPUTPORTDAEMON ]
 			//  1. either there is no active packet.
 			// OR
 			//  2. an active packet has finished.
-			// FIXME: This isn't a trivial problem to solve. The arbiter will have to be smarter.
+			
 			$volatile $call prioritySelect 
 					   (down_counter active_packet priority_index p1_valid p2_valid p3_valid p4_valid)
 							(next_active_packet next_priority_index)
@@ -191,7 +191,7 @@ $module [ ##OUTPUTPORTDAEMON ]
 			$volatile next_down_counter :=
 				($mux started_new_packet 
 					(next_active_packet_length - 1) // one word already read
-					($mux valid_active_pkt_word_read (down_counter - 1) down_counter))
+					($mux 		 (down_counter - 1) down_counter))
 
 			
 			//
@@ -222,14 +222,11 @@ $module [ ##OUTPUTPORTDAEMON ]
 					(next_active_packet == 4))
 
 			// send to output port.
-			$volatile data_to_out := ($mux (next_active_packet > 2)
-										($mux (next_active_packet == 1) 
-											($slice pkt_1_e_word 31 0)
-											($slice pkt_2_e_word 31 0))
-										($mux (next_active_packet == 3) 
-											($slice pkt_3_e_word 31 0)
-											($slice pkt_4_e_word 31 0))
-									)
+			$volatile data_to_out := ($excmux
+									(next_active_packet == 1) ($slice pkt_1_e_word 31 0)
+									(next_active_packet == 2) ($slice pkt_2_e_word 31 0)
+									(next_active_packet == 3) ($slice pkt_3_e_word 31 0)
+									(next_active_packet == 4) ($slice pkt_4_e_word 31 0))
 
 			//
 			// to send data you must have valid data.
