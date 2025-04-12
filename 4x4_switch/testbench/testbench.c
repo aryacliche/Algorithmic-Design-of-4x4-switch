@@ -24,25 +24,20 @@
 
 typedef struct _TbConfig {
 
-	// if 1, input port 1 will be fed by data
-	//   else input port 1 will be unused.
-	int input_port_1_active;
+	// if 1, input port will be fed by data
+	//   else input port will be unused.
+	int input_port_active[4];
 
 	// if random dest is set, then
 	// input port 1 can send data to either
 	// output port 1 or output port 2.
-	int input_port_1_random_dest_flag;
+	int input_port_random_dest_flag[4];
 
 	// if random_dest_flag is 0, then
 	// input port 1 writes only to
 	// this destination port (provided
 	// it is either 1 or 2).
-	int input_port_1_destination_port;
-
-	int input_port_2_active;
-	// see comments above.
-	int input_port_2_random_dest_flag;
-	int input_port_2_destination_port;
+	int input_port_destination_port[4];
 
 } TbConfig;
 TbConfig tb_config;
@@ -53,9 +48,6 @@ void input_port_core(int port_id)
 {
 
 	// if input port 1 is inactive, then just return...
-
-
-
 
 
 	uint32_t send_buffer[PACKET_LENGTH_IN_WORDS];	
@@ -70,20 +62,16 @@ void input_port_core(int port_id)
 	uint8_t seq_id = (port_id == 1) ? 1 : 0;
 	while(1)
 	{
-		int dest_port =  -1;
-		if(port_id == 1)
-		{
-			dest_port = 	
-				(tb_config.input_port_1_random_dest_flag ? ((rand() & 0x1)+1) :  
-					tb_config.input_port_1_destination_port);
-		}
-		else if(port_id == 2)
-		{
-			dest_port = 	
-				(tb_config.input_port_2_random_dest_flag ? ((rand() & 0x1)+1) :  
-					tb_config.input_port_2_destination_port);
-		}
+		int dest_port = 	
+			(tb_config.input_port_random_dest_flag[port_id - 1] ? ((rand() & 0x1)+1) :  
+				tb_config.input_port_destination_port[port_id - 1]);
 
+		
+		if (port_id == 3 || port_id == 4)
+		{
+			// do not send anything.
+			dest_port = 0;
+		}
 		if((dest_port == 1) || (dest_port == 2))
 		{
 			send_buffer[0] = (dest_port << 24) | (64 << 8) | seq_id;
@@ -109,6 +97,18 @@ void input_port_2_sender ()
 	input_port_core(2);
 }
 DEFINE_THREAD(input_port_2_sender);
+
+void input_port_3_sender ()
+{
+	input_port_core(3);
+}
+DEFINE_THREAD(input_port_3_sender);
+
+void input_port_4_sender ()
+{
+	input_port_core(4);
+}
+DEFINE_THREAD(input_port_4_sender);
 
 void output_port_core(int port_id)
 {
@@ -178,6 +178,18 @@ void output_port_2_receiver ()
 }
 DEFINE_THREAD(output_port_2_receiver);
 
+void output_port_3_receiver ()
+{
+	output_port_core(3);
+}
+DEFINE_THREAD(output_port_3_receiver);
+
+void output_port_4_receiver ()
+{
+	output_port_core(4);
+}
+DEFINE_THREAD(output_port_4_receiver);
+
 int main(int argc, char* argv[])
 {
 
@@ -220,13 +232,22 @@ int main(int argc, char* argv[])
 	// test configuration setup.
 	//  both input ports active, send
 	//  randomly to output ports.
-	tb_config.input_port_1_active = (__1to1 || __1to2 || __1toBoth || __BothtoBoth);
-	tb_config.input_port_1_random_dest_flag = (__1toBoth || __BothtoBoth);
-	tb_config.input_port_1_destination_port = (__1to1 ? 1 : (__1to2 ? 2 : -1));
+	tb_config.input_port_active[0] = (__1to1 || __1to2 || __1toBoth || __BothtoBoth);
+	tb_config.input_port_random_dest_flag[0] = (__1toBoth || __BothtoBoth);
+	tb_config.input_port_destination_port[0] = (__1to1 ? 1 : (__1to2 ? 2 : -1));
 
-	tb_config.input_port_2_active = (__2to1 || __2to2 || __2toBoth || __BothtoBoth);
-	tb_config.input_port_2_random_dest_flag = (__2toBoth || __BothtoBoth);
-	tb_config.input_port_2_destination_port = (__2to1 ? 1 : (__2to2 ? 2 : -1));
+	tb_config.input_port_active[1] = (__2to1 || __2to2 || __2toBoth || __BothtoBoth);
+	tb_config.input_port_random_dest_flag[1] = (__2toBoth || __BothtoBoth);
+	tb_config.input_port_destination_port[1] = (__2to1 ? 1 : (__2to2 ? 2 : -1));
+
+	// For now we will just keep the ports as dead.
+	tb_config.input_port_active[2] = 0;
+	tb_config.input_port_random_dest_flag[2] = 0;
+	tb_config.input_port_destination_port[2] = 0;
+
+	tb_config.input_port_active[3] = 0;
+	tb_config.input_port_random_dest_flag[3] = 0;
+	tb_config.input_port_destination_port[3] = 0;
 
 	// 
 	// start the receivers
@@ -237,17 +258,31 @@ int main(int argc, char* argv[])
 	PTHREAD_DECL(output_port_2_receiver);
 	PTHREAD_CREATE(output_port_2_receiver);
 
+	PTHREAD_DECL(output_port_3_receiver);
+	PTHREAD_CREATE(output_port_3_receiver);
+
+	PTHREAD_DECL(output_port_4_receiver);
+	PTHREAD_CREATE(output_port_4_receiver);
+
 	// start the senders.
 	PTHREAD_DECL(input_port_1_sender);
 	PTHREAD_CREATE(input_port_1_sender);
 
 	PTHREAD_DECL(input_port_2_sender);
 	PTHREAD_CREATE(input_port_2_sender);
+
+	PTHREAD_DECL(input_port_3_sender);
+	PTHREAD_CREATE(input_port_3_sender);
+
+	PTHREAD_DECL(input_port_4_sender);
+	PTHREAD_CREATE(input_port_4_sender);
 	
 
 	// wait on the two output threads
 	PTHREAD_JOIN(output_port_1_receiver);
 	PTHREAD_JOIN(output_port_2_receiver);
+	PTHREAD_JOIN(output_port_3_receiver);
+	PTHREAD_JOIN(output_port_4_receiver);
 
 	if(__err_flag__)
 	{
