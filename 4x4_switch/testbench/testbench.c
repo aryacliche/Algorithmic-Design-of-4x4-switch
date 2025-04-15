@@ -195,7 +195,7 @@ int main(int argc, char* argv[])
 
 	if(argc < 3)
 	{
-		fprintf(stderr,"Usage: %s [trace-file] [test_type] \n trace-file=null for no trace, stdout for stdout\n" "test_type = 1to1/1to2/1toBoth/2to1/2to2/2toBoth/Both2Both\n",
+		fprintf(stderr,"Usage: %s [trace-file] [test_type] \n trace-file=null for no trace, stdout for stdout\n" "test_type = 1to1/1to2/1toBoth/2to1/2to2/2toBoth/BothtoBoth\n",
 				argv[0]);
 		return(1);
 	}

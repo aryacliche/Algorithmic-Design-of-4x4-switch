@@ -45,7 +45,7 @@ $module [ ##INPUTPORTDAEMON ]
 
 			$merge $entry $loopback 
 				$phi count_down   := 
-						ZERO_8 $on $entry
+						ZERO_16 $on $entry
 							next_count_down $on $loopback
 				$phi input_word   := ##INPUT_PORT $on $entry, $loopback
 				$phi last_dest_id :=  0 $on $entry next_last_dest_id

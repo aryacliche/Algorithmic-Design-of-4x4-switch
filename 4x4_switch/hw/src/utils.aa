@@ -1,8 +1,9 @@
 $volatile $module [prioritySelect]
-	$in (down_counter: $uint<8> active_packet: $uint<2>
-			priority_index: $uint<3>
+	$in (down_counter: $uint<8> 
+			active_packet: $uint<3>
+			priority_index: $uint<2>
 			p1_valid p2_valid p3_valid p4_valid: $uint<1>) 
-	$out (next_active_packet: $uint<2> next_priority_index: $uint<3>)
+	$out (next_active_packet: $uint<3> next_priority_index: $uint<2>)
 $is
 //
 // if down_counter is 0, then it is time to decide which should be
@@ -55,12 +56,13 @@ $is
 			priority_4_validity)
 
 	next_active_packet := ($prioritymux 
-					(~d0)	active_packet 
-					select_first_priority ($cast ($uint<3>) priority_index + 1) 
-					select_second_priority ($cast ($uint<3>) priority_index + 2)
-					select_third_priority ($cast ($uint<3>) priority_index + 3)
-					select_fourth_priority ($cast ($uint<3>) priority_index + 4)
+					(~d0)	active_packet 	
+					select_first_priority  ((ZERO_1 && priority_index) + 1) 
+					select_second_priority ((ZERO_1 && (priority_index + 1)) + 1)
+					select_third_priority  ((ZERO_1 && (priority_index + 2)) + 1)
+					select_fourth_priority ((ZERO_1 && (priority_index + 3)) + 1)
 					$default 0	) // We don't have packet processing + no queue has relevant info
+					// The form looks weird because we are basically trying to ensure that we are looking at the 1-indexed version of priority_index as the next_active_packet
 
 	// priority rotates on every selection.
 	// I am assuming and really really hopeful that this doesn't end up 
@@ -68,6 +70,6 @@ $is
 							priority_1_validity (priority_index + 1)
 							priority_2_validity (priority_index + 2)
 							priority_3_validity (priority_index + 3)
-							priority_4_validity priority_index
+							priority_4_validity (priority_index + 4)
 							$default priority_index) // This means that nobody had a valid packet to deliver
 }

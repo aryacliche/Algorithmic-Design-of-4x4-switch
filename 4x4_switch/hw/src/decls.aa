@@ -47,6 +47,8 @@ $noblock $pipe noblock_obuf_4_4 : $uint<33> $depth  { OBUF_DEPTH_IN_PACKETS * PA
 
 // useful constants
 $constant ZERO_1: $uint<1> := 0
+$constant ZERO_3: $uint<3> := 0
+$constant ZERO_16: $uint<16> := 0
 $constant ONE_1: $uint<1> := 1
 $constant ZERO_2: $uint<2> := 0
 $constant ONE_2: $uint<2> := 1

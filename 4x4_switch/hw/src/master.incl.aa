@@ -51,7 +51,7 @@ $module [ inputPort_1_Daemon ]
 
 			$merge $entry $loopback 
 				$phi count_down   := 
-						ZERO_8 $on $entry
+						ZERO_16 $on $entry
 							next_count_down $on $loopback
 				$phi input_word   := in_data_1 $on $entry, $loopback
 				$phi last_dest_id :=  0 $on $entry next_last_dest_id
@@ -160,7 +160,7 @@ $module [ inputPort_2_Daemon ]
 
 			$merge $entry $loopback 
 				$phi count_down   := 
-						ZERO_8 $on $entry
+						ZERO_16 $on $entry
 							next_count_down $on $loopback
 				$phi input_word   := in_data_2 $on $entry, $loopback
 				$phi last_dest_id :=  0 $on $entry next_last_dest_id
@@ -269,7 +269,7 @@ $module [ inputPort_3_Daemon ]
 
 			$merge $entry $loopback 
 				$phi count_down   := 
-						ZERO_8 $on $entry
+						ZERO_16 $on $entry
 							next_count_down $on $loopback
 				$phi input_word   := in_data_3 $on $entry, $loopback
 				$phi last_dest_id :=  0 $on $entry next_last_dest_id
@@ -378,7 +378,7 @@ $module [ inputPort_4_Daemon ]
 
 			$merge $entry $loopback 
 				$phi count_down   := 
-						ZERO_8 $on $entry
+						ZERO_16 $on $entry
 							next_count_down $on $loopback
 				$phi input_word   := in_data_4 $on $entry, $loopback
 				$phi last_dest_id :=  0 $on $entry next_last_dest_id
@@ -634,7 +634,7 @@ $module [ outputPort_1_Daemon ]
 			$volatile next_down_counter :=
 				($mux started_new_packet 
 					(next_active_packet_length - 1) // one word already read
-					($mux 		 (down_counter - 1) down_counter))
+					($mux valid_active_pkt_word_read (down_counter - 1) down_counter))
 
 			
 			//
@@ -893,7 +893,7 @@ $module [ outputPort_2_Daemon ]
 			$volatile next_down_counter :=
 				($mux started_new_packet 
 					(next_active_packet_length - 1) // one word already read
-					($mux 		 (down_counter - 1) down_counter))
+					($mux valid_active_pkt_word_read (down_counter - 1) down_counter))
 
 			
 			//
@@ -1152,7 +1152,7 @@ $module [ outputPort_3_Daemon ]
 			$volatile next_down_counter :=
 				($mux started_new_packet 
 					(next_active_packet_length - 1) // one word already read
-					($mux 		 (down_counter - 1) down_counter))
+					($mux valid_active_pkt_word_read (down_counter - 1) down_counter))
 
 			
 			//
@@ -1411,7 +1411,7 @@ $module [ outputPort_4_Daemon ]
 			$volatile next_down_counter :=
 				($mux started_new_packet 
 					(next_active_packet_length - 1) // one word already read
-					($mux 		 (down_counter - 1) down_counter))
+					($mux valid_active_pkt_word_read (down_counter - 1) down_counter))
 
 			
 			//

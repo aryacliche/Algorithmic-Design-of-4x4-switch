@@ -191,7 +191,7 @@ $module [ ##OUTPUTPORTDAEMON ]
 			$volatile next_down_counter :=
 				($mux started_new_packet 
 					(next_active_packet_length - 1) // one word already read
-					($mux 		 (down_counter - 1) down_counter))
+					($mux valid_active_pkt_word_read (down_counter - 1) down_counter))
 
 			
 			//
