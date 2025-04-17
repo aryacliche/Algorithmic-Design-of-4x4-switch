@@ -47,9 +47,6 @@ int __err_flag__ = 0;
 void input_port_core(int port_id)
 {
 
-	// if input port 1 is inactive, then just return...
-
-
 	uint32_t send_buffer[PACKET_LENGTH_IN_WORDS];	
 
 	int i;
@@ -58,30 +55,32 @@ void input_port_core(int port_id)
 		send_buffer[i] = i;
 	}
 
-	// odd sequence id means from port 1 even sequence id means from port 2.
-	uint8_t seq_id = (port_id == 1) ? 1 : 0;
+	// sequence id % 4 will always be port_id % 4
+	uint8_t seq_id = (uint8_t)port_id;
 	while(1)
 	{
-		int dest_port = 	
-			(tb_config.input_port_random_dest_flag[port_id - 1] ? ((rand() & 0x1)+1) :  
-				tb_config.input_port_destination_port[port_id - 1]);
-
-		
-		if (port_id == 3 || port_id == 4)
+		if (!tb_config.input_port_active[port_id - 1])
 		{
-			// do not send anything.
-			dest_port = 0;
+			continue;
 		}
-		if((dest_port == 1) || (dest_port == 2))
+		int dest_port = 	
+			(tb_config.input_port_random_dest_flag[port_id - 1] ? ((rand() & 0x3)+1) :  
+				tb_config.input_port_destination_port[port_id - 1]);
+		
+		if(dest_port != 0)
 		{
-			send_buffer[0] = (dest_port << 24) | (64 << 8) | seq_id;
-			if(port_id == 1)
-				write_uint32_n ("in_data_1", send_buffer, PACKET_LENGTH_IN_WORDS);
-			else
-				write_uint32_n ("in_data_2", send_buffer, PACKET_LENGTH_IN_WORDS);
-
-			// increment by 2
-			seq_id += 2;
+			send_buffer[0] = (dest_port << 24) | (PACKET_LENGTH_IN_WORDS << 8) | seq_id;
+			const char *prefix = "in_data_";
+			char *chosen_port = malloc(10 * sizeof(char)); // 8 (in_data_) + 1(port_id) + 1 (null pointer) = 10
+			if (chosen_port == NULL) {
+				fprintf(stderr, "Memory allocation failed\n");
+				exit(1);
+			}
+			sprintf(chosen_port, "%s%d", prefix, port_id);
+			write_uint32_n(chosen_port, send_buffer, PACKET_LENGTH_IN_WORDS);
+			
+			// increment by 4
+			seq_id += 4;
 		}
 	}
 }
@@ -119,15 +118,21 @@ void output_port_core(int port_id)
 	{
 		uint32_t packet[PACKET_LENGTH_IN_WORDS];
 
-		if(port_id == 1)
-			read_uint32_n ("out_data_1", packet, PACKET_LENGTH_IN_WORDS);
-		else
-			read_uint32_n ("out_data_2", packet, PACKET_LENGTH_IN_WORDS);
+		const char *prefix = "out_data_";
+		char *chosen_port = malloc(11 * sizeof(char)); // 9 (out_data_) + 1(port_id) + 1 (null pointer) = 11
+		if (chosen_port == NULL) {
+			fprintf(stderr, "Memory allocation failed\n");
+			exit(1);
+		}
+		sprintf(chosen_port, "%s%d", prefix, port_id);
+		read_uint32_n (chosen_port, packet, PACKET_LENGTH_IN_WORDS);
 		
 		PCOUNT++;
 
 		int dest = (packet[0] >> 24);
-		int input_port = ((packet[0] & 0x1) ? 1 : 2);
+		int num_packets = (packet[0] >> 8) & 0xFF;
+		int seq_mod_4 = (packet[0] & 0x3);
+		int input_port = (seq_mod_4 == 0) ? 4 : seq_mod_4;
 
 		//
 		// check the destination?
@@ -140,8 +145,8 @@ void output_port_core(int port_id)
 		}
 		else
 		{
-			fprintf(stderr,"\nRx[%d] at output port %d from input port %d\n", 
-					PCOUNT, port_id, input_port);
+			fprintf(stderr,"\nRx[%d] at output port %d from input port %d [seq id = %d]\n", 
+					PCOUNT, port_id, input_port, packet[0] & 0xFF, seq_mod_4);
 		}
 
 
@@ -195,7 +200,7 @@ int main(int argc, char* argv[])
 
 	if(argc < 3)
 	{
-		fprintf(stderr,"Usage: %s [trace-file] [test_type] \n trace-file=null for no trace, stdout for stdout\n" "test_type = 1to1/1to2/1toBoth/2to1/2to2/2toBoth/BothtoBoth\n",
+		fprintf(stderr,"Usage: %s [trace-file] [test_type] \n trace-file=null for no trace, stdout for stdout\n" "test_type = <x>to<y> [x, y belong to {1, 2, 3, 4, All}]\n",
 				argv[0]);
 		return(1);
 	}
@@ -215,13 +220,68 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	int __1to1 = (strcmp(argv[2],"1to1") == 0);
-	int __1to2 = (strcmp(argv[2],"1to2") == 0);
-	int __1toBoth = (strcmp(argv[2],"1toBoth") == 0);
-	int __2to1 = (strcmp(argv[2],"2to1") == 0);
-	int __2to2 = (strcmp(argv[2],"2to2") == 0);
-	int __2toBoth = (strcmp(argv[2],"2toBoth") == 0);
-	int __BothtoBoth = (strcmp(argv[2],"BothtoBoth") == 0);
+	char x_str[8], y_str[8];
+    int x_is_all = 0, y_is_all = 0;
+    int x = 0, y = 0;
+
+    // Example: argv[2] = "2toAll";
+    strcpy(x_str, ""); // Initialize
+    strcpy(y_str, "");
+
+    sscanf(argv[2], "%7[^t]to%7s", x_str, y_str); // Extract x and y as strings
+
+    // Handle "All" or numbers
+    if (strcmp(x_str, "All") == 0) {
+		x_is_all = 1;
+		int i = 0;
+		for (i = 0; i < 4; i++) 
+        	tb_config.input_port_active[i] = 1;
+    } else {
+		x = atoi(x_str);
+        tb_config.input_port_active[x - 1] = 1;
+    }
+
+    if (strcmp(y_str, "All") == 0) {
+        y_is_all = 1;
+		if (x_is_all) {
+			int i = 0;
+			for (i = 0; i < 4; i++) {
+				tb_config.input_port_destination_port[i] = -1;
+				tb_config.input_port_random_dest_flag[i] = 1;
+			}
+		} else {
+			tb_config.input_port_destination_port[x - 1] = -1;
+			tb_config.input_port_random_dest_flag[x - 1] = 1;
+		}
+    } else {
+        y = atoi(y_str);
+		if (x_is_all) {
+			int i = 0;
+			for (i = 0; i < 4; i++) {
+				tb_config.input_port_destination_port[i] = y;
+				tb_config.input_port_random_dest_flag[i] = 0;
+			}
+		} else {
+			tb_config.input_port_destination_port[x - 1] = y;
+			tb_config.input_port_random_dest_flag[x - 1] = 0;
+		}
+    }
+
+	int i = 0;
+	for (i = 0; i < 4; i++) {
+		if (tb_config.input_port_active[i]) {
+			fprintf(stderr, "Input port %d is active\n", i + 1);
+		} else {
+			fprintf(stderr, "Input port %d is inactive\n", i + 1);
+		}
+		if (tb_config.input_port_random_dest_flag[i]) {
+			fprintf(stderr, "Input port %d will send to random destination\n", i + 1);
+		} else {
+			fprintf(stderr, "Input port %d will send to destination port %d\n", i + 1, tb_config.input_port_destination_port[i]);
+		}
+	}
+
+	// tb_config.input_port_active[1] = 0;
 
 #ifndef COMPILE_TEST_ONLY
 #ifdef AA2C
@@ -229,26 +289,7 @@ int main(int argc, char* argv[])
 	start_daemons (fp,0);
 #endif
 #endif
-	// test configuration setup.
-	//  both input ports active, send
-	//  randomly to output ports.
-	tb_config.input_port_active[0] = (__1to1 || __1to2 || __1toBoth || __BothtoBoth);
-	tb_config.input_port_random_dest_flag[0] = (__1toBoth || __BothtoBoth);
-	tb_config.input_port_destination_port[0] = (__1to1 ? 1 : (__1to2 ? 2 : -1));
-
-	tb_config.input_port_active[1] = (__2to1 || __2to2 || __2toBoth || __BothtoBoth);
-	tb_config.input_port_random_dest_flag[1] = (__2toBoth || __BothtoBoth);
-	tb_config.input_port_destination_port[1] = (__2to1 ? 1 : (__2to2 ? 2 : -1));
-
-	// For now we will just keep the ports as dead.
-	tb_config.input_port_active[2] = 0;
-	tb_config.input_port_random_dest_flag[2] = 0;
-	tb_config.input_port_destination_port[2] = 0;
-
-	tb_config.input_port_active[3] = 0;
-	tb_config.input_port_random_dest_flag[3] = 0;
-	tb_config.input_port_destination_port[3] = 0;
-
+	
 	// 
 	// start the receivers
 	// 

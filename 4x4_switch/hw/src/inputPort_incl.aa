@@ -3,6 +3,8 @@
 //   INPUT_PORT
 //   NOBLOCKOBUF_TO_1 
 //   NOBLOCKOBUF_TO_2 
+//	 NOBLOCKOBUF_TO_3
+//	 NOBLOCKOBUF_TO_4
 // 
 $module [ ##INPUTPORTDAEMON ]
 	$in () $out () $is

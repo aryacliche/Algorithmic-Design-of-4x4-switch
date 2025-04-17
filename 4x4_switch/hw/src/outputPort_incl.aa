@@ -4,6 +4,8 @@
 //   OUTPUTPORTDAEMON
 //   NOBLOCKOBUF_FROM_1  
 //   NOBLOCKOBUF_FROM_2  
+//   NOBLOCKOBUF_FROM_3  
+//   NOBLOCKOBUF_FROM_4  
 //   OUTPUT_PORT
 //
 $module [ ##OUTPUTPORTDAEMON ]
@@ -172,15 +174,11 @@ $module [ ##OUTPUTPORTDAEMON ]
 				((next_active_packet != 0) & (down_counter == 0))
 			$volatile next_active_packet_length :=
 					($mux started_new_packet 
-						($mux (next_active_packet > 2)
-							($mux (next_active_packet == 1)
-								// keep 8 bits.
-								($slice pkt_1_e_word 15 8)
-								($slice pkt_2_e_word 15 8))
-							($mux (next_active_packet == 3)
-								// keep 8 bits.
-								($slice pkt_3_e_word 15 8)
-								($slice pkt_4_e_word 15 8)))
+						($excmux
+								(next_active_packet == 1) ($slice pkt_1_e_word 15 8)
+								(next_active_packet == 2) ($slice pkt_2_e_word 15 8)
+								(next_active_packet == 3) ($slice pkt_3_e_word 15 8)
+								(next_active_packet == 4) ($slice pkt_4_e_word 15 8))
 						active_packet_length)
 								
 							

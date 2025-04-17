@@ -9,6 +9,8 @@
 //   INPUT_PORT
 //   NOBLOCKOBUF_TO_1 
 //   NOBLOCKOBUF_TO_2 
+//	 NOBLOCKOBUF_TO_3
+//	 NOBLOCKOBUF_TO_4
 // 
 $module [ inputPort_1_Daemon ]
 	$in () $out () $is
@@ -118,6 +120,8 @@ $module [ inputPort_1_Daemon ]
 //   INPUT_PORT
 //   NOBLOCKOBUF_TO_1 
 //   NOBLOCKOBUF_TO_2 
+//	 NOBLOCKOBUF_TO_3
+//	 NOBLOCKOBUF_TO_4
 // 
 $module [ inputPort_2_Daemon ]
 	$in () $out () $is
@@ -227,6 +231,8 @@ $module [ inputPort_2_Daemon ]
 //   INPUT_PORT
 //   NOBLOCKOBUF_TO_1 
 //   NOBLOCKOBUF_TO_2 
+//	 NOBLOCKOBUF_TO_3
+//	 NOBLOCKOBUF_TO_4
 // 
 $module [ inputPort_3_Daemon ]
 	$in () $out () $is
@@ -336,6 +342,8 @@ $module [ inputPort_3_Daemon ]
 //   INPUT_PORT
 //   NOBLOCKOBUF_TO_1 
 //   NOBLOCKOBUF_TO_2 
+//	 NOBLOCKOBUF_TO_3
+//	 NOBLOCKOBUF_TO_4
 // 
 $module [ inputPort_4_Daemon ]
 	$in () $out () $is
@@ -447,6 +455,8 @@ $module [ inputPort_4_Daemon ]
 //   OUTPUTPORTDAEMON
 //   NOBLOCKOBUF_FROM_1  
 //   NOBLOCKOBUF_FROM_2  
+//   NOBLOCKOBUF_FROM_3  
+//   NOBLOCKOBUF_FROM_4  
 //   OUTPUT_PORT
 //
 $module [ outputPort_1_Daemon ]
@@ -615,15 +625,11 @@ $module [ outputPort_1_Daemon ]
 				((next_active_packet != 0) & (down_counter == 0))
 			$volatile next_active_packet_length :=
 					($mux started_new_packet 
-						($mux (next_active_packet > 2)
-							($mux (next_active_packet == 1)
-								// keep 8 bits.
-								($slice pkt_1_e_word 15 8)
-								($slice pkt_2_e_word 15 8))
-							($mux (next_active_packet == 3)
-								// keep 8 bits.
-								($slice pkt_3_e_word 15 8)
-								($slice pkt_4_e_word 15 8)))
+						($excmux
+								(next_active_packet == 1) ($slice pkt_1_e_word 15 8)
+								(next_active_packet == 2) ($slice pkt_2_e_word 15 8)
+								(next_active_packet == 3) ($slice pkt_3_e_word 15 8)
+								(next_active_packet == 4) ($slice pkt_4_e_word 15 8))
 						active_packet_length)
 								
 							
@@ -706,6 +712,8 @@ $module [ outputPort_1_Daemon ]
 //   OUTPUTPORTDAEMON
 //   NOBLOCKOBUF_FROM_1  
 //   NOBLOCKOBUF_FROM_2  
+//   NOBLOCKOBUF_FROM_3  
+//   NOBLOCKOBUF_FROM_4  
 //   OUTPUT_PORT
 //
 $module [ outputPort_2_Daemon ]
@@ -874,15 +882,11 @@ $module [ outputPort_2_Daemon ]
 				((next_active_packet != 0) & (down_counter == 0))
 			$volatile next_active_packet_length :=
 					($mux started_new_packet 
-						($mux (next_active_packet > 2)
-							($mux (next_active_packet == 1)
-								// keep 8 bits.
-								($slice pkt_1_e_word 15 8)
-								($slice pkt_2_e_word 15 8))
-							($mux (next_active_packet == 3)
-								// keep 8 bits.
-								($slice pkt_3_e_word 15 8)
-								($slice pkt_4_e_word 15 8)))
+						($excmux
+								(next_active_packet == 1) ($slice pkt_1_e_word 15 8)
+								(next_active_packet == 2) ($slice pkt_2_e_word 15 8)
+								(next_active_packet == 3) ($slice pkt_3_e_word 15 8)
+								(next_active_packet == 4) ($slice pkt_4_e_word 15 8))
 						active_packet_length)
 								
 							
@@ -965,6 +969,8 @@ $module [ outputPort_2_Daemon ]
 //   OUTPUTPORTDAEMON
 //   NOBLOCKOBUF_FROM_1  
 //   NOBLOCKOBUF_FROM_2  
+//   NOBLOCKOBUF_FROM_3  
+//   NOBLOCKOBUF_FROM_4  
 //   OUTPUT_PORT
 //
 $module [ outputPort_3_Daemon ]
@@ -1133,15 +1139,11 @@ $module [ outputPort_3_Daemon ]
 				((next_active_packet != 0) & (down_counter == 0))
 			$volatile next_active_packet_length :=
 					($mux started_new_packet 
-						($mux (next_active_packet > 2)
-							($mux (next_active_packet == 1)
-								// keep 8 bits.
-								($slice pkt_1_e_word 15 8)
-								($slice pkt_2_e_word 15 8))
-							($mux (next_active_packet == 3)
-								// keep 8 bits.
-								($slice pkt_3_e_word 15 8)
-								($slice pkt_4_e_word 15 8)))
+						($excmux
+								(next_active_packet == 1) ($slice pkt_1_e_word 15 8)
+								(next_active_packet == 2) ($slice pkt_2_e_word 15 8)
+								(next_active_packet == 3) ($slice pkt_3_e_word 15 8)
+								(next_active_packet == 4) ($slice pkt_4_e_word 15 8))
 						active_packet_length)
 								
 							
@@ -1224,6 +1226,8 @@ $module [ outputPort_3_Daemon ]
 //   OUTPUTPORTDAEMON
 //   NOBLOCKOBUF_FROM_1  
 //   NOBLOCKOBUF_FROM_2  
+//   NOBLOCKOBUF_FROM_3  
+//   NOBLOCKOBUF_FROM_4  
 //   OUTPUT_PORT
 //
 $module [ outputPort_4_Daemon ]
@@ -1392,15 +1396,11 @@ $module [ outputPort_4_Daemon ]
 				((next_active_packet != 0) & (down_counter == 0))
 			$volatile next_active_packet_length :=
 					($mux started_new_packet 
-						($mux (next_active_packet > 2)
-							($mux (next_active_packet == 1)
-								// keep 8 bits.
-								($slice pkt_1_e_word 15 8)
-								($slice pkt_2_e_word 15 8))
-							($mux (next_active_packet == 3)
-								// keep 8 bits.
-								($slice pkt_3_e_word 15 8)
-								($slice pkt_4_e_word 15 8)))
+						($excmux
+								(next_active_packet == 1) ($slice pkt_1_e_word 15 8)
+								(next_active_packet == 2) ($slice pkt_2_e_word 15 8)
+								(next_active_packet == 3) ($slice pkt_3_e_word 15 8)
+								(next_active_packet == 4) ($slice pkt_4_e_word 15 8))
 						active_packet_length)
 								
 							
