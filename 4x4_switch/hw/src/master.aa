@@ -1,5 +1,6 @@
 #define INPUTPORTDAEMON   inputPort_1_Daemon
 #define INPUT_PORT	  in_data_1
+#define PORT_ID     0
 #define NOBLOCKOBUF_TO_1  noblock_obuf_1_1
 #define NOBLOCKOBUF_TO_2  noblock_obuf_1_2
 #define NOBLOCKOBUF_TO_3  noblock_obuf_1_3
@@ -8,6 +9,7 @@
 
 #define INPUTPORTDAEMON   inputPort_2_Daemon
 #define INPUT_PORT	  in_data_2
+#define PORT_ID     1
 #define NOBLOCKOBUF_TO_1  noblock_obuf_2_1
 #define NOBLOCKOBUF_TO_2  noblock_obuf_2_2
 #define NOBLOCKOBUF_TO_3  noblock_obuf_2_3
@@ -16,6 +18,7 @@
 
 #define INPUTPORTDAEMON   inputPort_3_Daemon
 #define INPUT_PORT	  in_data_3
+#define PORT_ID     2
 #define NOBLOCKOBUF_TO_1  noblock_obuf_3_1
 #define NOBLOCKOBUF_TO_2  noblock_obuf_3_2
 #define NOBLOCKOBUF_TO_3  noblock_obuf_3_3
@@ -24,6 +27,7 @@
 
 #define INPUTPORTDAEMON   inputPort_4_Daemon
 #define INPUT_PORT	  in_data_4
+#define PORT_ID     3
 #define NOBLOCKOBUF_TO_1  noblock_obuf_4_1
 #define NOBLOCKOBUF_TO_2  noblock_obuf_4_2
 #define NOBLOCKOBUF_TO_3  noblock_obuf_4_3
@@ -32,6 +36,7 @@
 
 
 #define OUTPUTPORTDAEMON   outputPort_1_Daemon
+#define PORT_ID     0
 #define NOBLOCKOBUF_FROM_1 noblock_obuf_1_1
 #define NOBLOCKOBUF_FROM_2 noblock_obuf_2_1
 #define NOBLOCKOBUF_FROM_3 noblock_obuf_3_1
@@ -40,6 +45,7 @@
 #include outputPort_incl.aa
 
 #define OUTPUTPORTDAEMON   outputPort_2_Daemon
+#define PORT_ID     1
 #define NOBLOCKOBUF_FROM_1 noblock_obuf_1_2
 #define NOBLOCKOBUF_FROM_2 noblock_obuf_2_2
 #define NOBLOCKOBUF_FROM_3 noblock_obuf_3_2
@@ -48,6 +54,7 @@
 #include outputPort_incl.aa
 
 #define OUTPUTPORTDAEMON   outputPort_3_Daemon
+#define PORT_ID     2
 #define NOBLOCKOBUF_FROM_1 noblock_obuf_1_3
 #define NOBLOCKOBUF_FROM_2 noblock_obuf_2_3
 #define NOBLOCKOBUF_FROM_3 noblock_obuf_3_3
@@ -56,6 +63,7 @@
 #include outputPort_incl.aa
 
 #define OUTPUTPORTDAEMON   outputPort_4_Daemon
+#define PORT_ID     3
 #define NOBLOCKOBUF_FROM_1 noblock_obuf_1_4
 #define NOBLOCKOBUF_FROM_2 noblock_obuf_2_4
 #define NOBLOCKOBUF_FROM_3 noblock_obuf_3_4

@@ -45,6 +45,10 @@ $noblock $pipe noblock_obuf_4_3 : $uint<33> $depth  { OBUF_DEPTH_IN_PACKETS * PA
 $noblock $pipe noblock_obuf_4_4 : $uint<33> $depth  { OBUF_DEPTH_IN_PACKETS * PACKET_LENGTH_IN_WORDS }
 
 
+// Semaphores for each of the output buffers
+$storage obuf_semaphore: $array[4][4] $of $uint<2> // The only values it needs to carry are 00, 01, 10 
+
+
 // useful constants
 $constant ZERO_1: $uint<1> := 0
 $constant ZERO_3: $uint<3> := 0

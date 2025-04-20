@@ -138,7 +138,7 @@ $module [ ##OUTPUTPORTDAEMON ]
 			//      or     packet from 1 is in progress but down-count is not zero.
 			//
 			//  ($reduce | a b c)  is the same as ((a | b) | c)
-			// FIXME: I have no clue how this logic works
+			
 			$volatile read_from_1 := 
 				($reduce |
 					(~p1_valid)
@@ -165,7 +165,7 @@ $module [ ##OUTPUTPORTDAEMON ]
 									(next_active_packet == 2) ($slice pkt_2_e_word 31 0)
 									(next_active_packet == 3) ($slice pkt_3_e_word 31 0)
 									(next_active_packet == 4) ($slice pkt_4_e_word 31 0))
-
+			
 			//
 			// to send data you must have valid data.
 			//
@@ -174,6 +174,8 @@ $module [ ##OUTPUTPORTDAEMON ]
 							(next_active_packet == 2) p2_valid 
 							(next_active_packet == 3) p3_valid 
 							(next_active_packet == 4) p4_valid )
+			
+			$call updateCounter (next_active_packet ##PORT_ID $zero<1> send_flag) (continue)
 						
 			// send if necessary..
 			$guard (send_flag)

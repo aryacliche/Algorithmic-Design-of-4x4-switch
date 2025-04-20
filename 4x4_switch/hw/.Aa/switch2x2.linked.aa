@@ -1,0 +1,480 @@
+$constant  ONE_1 : $uint<1>:= 1  
+$constant  ONE_2 : $uint<2>:= 1  
+$constant  ONE_33 : $uint<33>:= 1  
+$constant  ONE_8 : $uint<8>:= 1  
+$constant  ZERO_1 : $uint<1>:= 0  
+$constant  ZERO_16 : $uint<16>:= 0  
+$constant  ZERO_2 : $uint<2>:= 0  
+$constant  ZERO_3 : $uint<3>:= 0  
+$constant  ZERO_33 : $uint<33>:= 0  
+$constant  ZERO_8 : $uint<8>:= 0  
+$pipe  in_data_1 : $uint<32>  $depth 2 
+// can point into 
+$pipe  in_data_2 : $uint<32>  $depth 2 
+// can point into 
+$pipe  in_data_3 : $uint<32>  $depth 2 
+// can point into 
+$pipe  in_data_4 : $uint<32>  $depth 2 
+// can point into 
+$noblock $pipe  noblock_obuf_1_1 : $uint<33>  $depth 128 
+// can point into 
+$noblock $pipe  noblock_obuf_1_2 : $uint<33>  $depth 128 
+// can point into 
+$noblock $pipe  noblock_obuf_1_3 : $uint<33>  $depth 128 
+// can point into 
+$noblock $pipe  noblock_obuf_1_4 : $uint<33>  $depth 128 
+// can point into 
+$noblock $pipe  noblock_obuf_2_1 : $uint<33>  $depth 128 
+// can point into 
+$noblock $pipe  noblock_obuf_2_2 : $uint<33>  $depth 128 
+// can point into 
+$noblock $pipe  noblock_obuf_2_3 : $uint<33>  $depth 128 
+// can point into 
+$noblock $pipe  noblock_obuf_2_4 : $uint<33>  $depth 128 
+// can point into 
+$noblock $pipe  noblock_obuf_3_1 : $uint<33>  $depth 128 
+// can point into 
+$noblock $pipe  noblock_obuf_3_2 : $uint<33>  $depth 128 
+// can point into 
+$noblock $pipe  noblock_obuf_3_3 : $uint<33>  $depth 128 
+// can point into 
+$noblock $pipe  noblock_obuf_3_4 : $uint<33>  $depth 128 
+// can point into 
+$noblock $pipe  noblock_obuf_4_1 : $uint<33>  $depth 128 
+// can point into 
+$noblock $pipe  noblock_obuf_4_2 : $uint<33>  $depth 128 
+// can point into 
+$noblock $pipe  noblock_obuf_4_3 : $uint<33>  $depth 128 
+// can point into 
+$noblock $pipe  noblock_obuf_4_4 : $uint<33>  $depth 128 
+// can point into 
+$storage  obuf_semaphore : $array[4][4] $of $uint<2> // memory space index = 0  base address = 0  word size = 2
+// can point into 
+$pipe  out_data_1 : $uint<32>  $depth 2 
+// can point into 
+$pipe  out_data_2 : $uint<32>  $depth 2 
+// can point into 
+$pipe  out_data_3 : $uint<32>  $depth 2 
+// can point into 
+$pipe  out_data_4 : $uint<32>  $depth 2 
+// can point into 
+$module [global_storage_initializer_]
+$in ()
+$out ()
+$is
+{
+  $null
+}
+$module [initialiseCounters]
+$in ()
+$out ()
+$is
+{
+  $branchblock [loop]
+  {
+    $merge $entry I_loopback 
+    $phi I := 			  ($bitcast ($uint<8>) _b0 ) $on   $entry 			  nI $on   I_loopback 
+    // type of target is $uint<8>
+    $endmerge
+    $volatile nI := (I + 1 ) $buffering 1
+    $branchblock [loop]
+    {
+      $merge $entry J_loopback 
+      $phi J := 				  ($bitcast ($uint<8>) _b0 ) $on   $entry 				  nJ $on   J_loopback 
+      // type of target is $uint<8>
+      $endmerge
+      $volatile nJ := (J + 1 ) $buffering 1
+      obuf_semaphore[I][J] := ZERO_2 $buffering 1// bits of buffering = 2. 
+      $if (J < 3 ) $then 
+      $place[J_loopback]
+      $endif
+    }
+    $if (I < 3 ) $then 
+    $place[I_loopback]
+    $endif
+  }
+}
+$module [updateCounter]
+$in ( input_port : $uint<8>   output_port : $uint<8>   up : $uint<1>  )
+$out ( continue : $uint<1>  )
+$is
+{
+  $volatile down := ( ~ up ) $buffering 1
+  $volatile continue := ((( $mux ((obuf_semaphore[input_port][output_port] > 127 ) & (down == 1 )) 1   _b0  )  | ( $mux ((obuf_semaphore[input_port][output_port] < 1 ) & (up == 1 )) 1   _b0  ) ) | (( $mux ((obuf_semaphore[input_port][output_port] == 128 ) & (up == 1 )) 0   _b0  )  | ( $mux ((obuf_semaphore[input_port][output_port] == 0 ) & (down == 1 )) 0   _b0  ) )) $buffering 1
+  obuf_semaphore[input_port][output_port] := ((( $mux (continue & (down == 1 )) (obuf_semaphore[input_port][output_port] - 1 )  _b0  )  | ( $mux (continue & (up == 1 )) (obuf_semaphore[input_port][output_port] + 1 )  _b0  ) ) | ( $mux ( ~ continue ) obuf_semaphore[input_port][output_port]  _b0  ) ) $buffering 1// bits of buffering = 2. 
+}
+$module [inputPort_1_Daemon]
+$in ()
+$out ()
+$is
+{
+  $branchblock [loop]
+  {
+    $dopipeline $depth 7 $buffering 1
+    $fullrate 
+    $merge $entry $loopback 
+    $phi count_down := 			  ZERO_16 $on   $entry 			  next_count_down $on   $loopback 
+    // type of target is $uint<16>
+    $phi input_word := 			  in_data_1 $on   $entry ,   $loopback 
+    // type of target is $uint<32>
+    $phi last_dest_id := 			  next_last_dest_id $on   $loopback 			  0  $on   $entry 
+    // type of target is $uint<8>
+    $endmerge
+    $report (inputPort_1_Daemon received_input_word 			 input_word input_word )
+    $volatile new_packet := (count_down == 0 ) $buffering 1
+    $volatile dest_id := ( $slice input_word 31 24 )  $buffering 1
+    $volatile pkt_length := ( $slice input_word 23 8 )  $buffering 1
+    $volatile seq_id := ( $slice input_word 7 0 )  $buffering 1
+    $guard (new_packet) $report (inputPort_1_Daemon new_packet_summary 			 dest_id dest_id 			 pkt_length pkt_length 			 seq_id seq_id )
+    $volatile next_count_down := ( $mux new_packet (pkt_length - 1 )  (count_down - 1 ) )  $buffering 1
+    $volatile next_last_dest_id := ( $mux new_packet dest_id  last_dest_id )  $buffering 1
+    $volatile data_to_outport := (ONE_1 && input_word) $buffering 1
+    $volatile continue := ( $call updateCounter (0  (next_last_dest_id - 1 ) ($bitcast ($uint<1>) _b1 ) ) ) $buffering 1
+    $volatile send_to_1 := ((next_last_dest_id == 1 ) & continue) $buffering 1
+    $volatile send_to_2 := ((next_last_dest_id == 2 ) & continue) $buffering 1
+    $volatile send_to_3 := ((next_last_dest_id == 3 ) & continue) $buffering 1
+    $volatile send_to_4 := ((next_last_dest_id == 4 ) & continue) $buffering 1
+    $guard (send_to_1) noblock_obuf_1_1 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $guard (send_to_2) noblock_obuf_1_2 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $guard (send_to_3) noblock_obuf_1_3 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $guard (send_to_4) noblock_obuf_1_4 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $report (inputPort_1_Daemon write_status 			 send_to_1 send_to_1 			 send_to_2 send_to_2 			 send_to_3 send_to_3 			 send_to_4 send_to_4 			 data_to_outport data_to_outport 			 new_packet new_packet 			 last_dest_id last_dest_id 			 next_last_dest_id next_last_dest_id 			 count_down count_down )
+    $while 1 
+  }
+}
+$module [inputPort_2_Daemon]
+$in ()
+$out ()
+$is
+{
+  $branchblock [loop]
+  {
+    $dopipeline $depth 7 $buffering 1
+    $fullrate 
+    $merge $entry $loopback 
+    $phi count_down := 			  ZERO_16 $on   $entry 			  next_count_down $on   $loopback 
+    // type of target is $uint<16>
+    $phi input_word := 			  in_data_2 $on   $entry ,   $loopback 
+    // type of target is $uint<32>
+    $phi last_dest_id := 			  0  $on   $entry 			  next_last_dest_id $on   $loopback 
+    // type of target is $uint<8>
+    $endmerge
+    $report (inputPort_2_Daemon received_input_word 			 input_word input_word )
+    $volatile new_packet := (count_down == 0 ) $buffering 1
+    $volatile dest_id := ( $slice input_word 31 24 )  $buffering 1
+    $volatile pkt_length := ( $slice input_word 23 8 )  $buffering 1
+    $volatile seq_id := ( $slice input_word 7 0 )  $buffering 1
+    $guard (new_packet) $report (inputPort_2_Daemon new_packet_summary 			 dest_id dest_id 			 pkt_length pkt_length 			 seq_id seq_id )
+    $volatile next_count_down := ( $mux new_packet (pkt_length - 1 )  (count_down - 1 ) )  $buffering 1
+    $volatile next_last_dest_id := ( $mux new_packet dest_id  last_dest_id )  $buffering 1
+    $volatile data_to_outport := (ONE_1 && input_word) $buffering 1
+    $volatile continue := ( $call updateCounter (1  (next_last_dest_id - 1 ) ($bitcast ($uint<1>) _b1 ) ) ) $buffering 1
+    $volatile send_to_1 := ((next_last_dest_id == 1 ) & continue) $buffering 1
+    $volatile send_to_2 := ((next_last_dest_id == 2 ) & continue) $buffering 1
+    $volatile send_to_3 := ((next_last_dest_id == 3 ) & continue) $buffering 1
+    $volatile send_to_4 := ((next_last_dest_id == 4 ) & continue) $buffering 1
+    $guard (send_to_1) noblock_obuf_2_1 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $guard (send_to_2) noblock_obuf_2_2 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $guard (send_to_3) noblock_obuf_2_3 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $guard (send_to_4) noblock_obuf_2_4 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $report (inputPort_2_Daemon write_status 			 send_to_1 send_to_1 			 send_to_2 send_to_2 			 send_to_3 send_to_3 			 send_to_4 send_to_4 			 data_to_outport data_to_outport 			 new_packet new_packet 			 last_dest_id last_dest_id 			 next_last_dest_id next_last_dest_id 			 count_down count_down )
+    $while 1 
+  }
+}
+$module [inputPort_3_Daemon]
+$in ()
+$out ()
+$is
+{
+  $branchblock [loop]
+  {
+    $dopipeline $depth 7 $buffering 1
+    $fullrate 
+    $merge $entry $loopback 
+    $phi count_down := 			  ZERO_16 $on   $entry 			  next_count_down $on   $loopback 
+    // type of target is $uint<16>
+    $phi input_word := 			  in_data_3 $on   $entry ,   $loopback 
+    // type of target is $uint<32>
+    $phi last_dest_id := 			  0  $on   $entry 			  next_last_dest_id $on   $loopback 
+    // type of target is $uint<8>
+    $endmerge
+    $report (inputPort_3_Daemon received_input_word 			 input_word input_word )
+    $volatile new_packet := (count_down == 0 ) $buffering 1
+    $volatile dest_id := ( $slice input_word 31 24 )  $buffering 1
+    $volatile pkt_length := ( $slice input_word 23 8 )  $buffering 1
+    $volatile seq_id := ( $slice input_word 7 0 )  $buffering 1
+    $guard (new_packet) $report (inputPort_3_Daemon new_packet_summary 			 dest_id dest_id 			 pkt_length pkt_length 			 seq_id seq_id )
+    $volatile next_count_down := ( $mux new_packet (pkt_length - 1 )  (count_down - 1 ) )  $buffering 1
+    $volatile next_last_dest_id := ( $mux new_packet dest_id  last_dest_id )  $buffering 1
+    $volatile data_to_outport := (ONE_1 && input_word) $buffering 1
+    $volatile continue := ( $call updateCounter (2  (next_last_dest_id - 1 ) ($bitcast ($uint<1>) _b1 ) ) ) $buffering 1
+    $volatile send_to_1 := ((next_last_dest_id == 1 ) & continue) $buffering 1
+    $volatile send_to_2 := ((next_last_dest_id == 2 ) & continue) $buffering 1
+    $volatile send_to_3 := ((next_last_dest_id == 3 ) & continue) $buffering 1
+    $volatile send_to_4 := ((next_last_dest_id == 4 ) & continue) $buffering 1
+    $guard (send_to_1) noblock_obuf_3_1 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $guard (send_to_2) noblock_obuf_3_2 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $guard (send_to_3) noblock_obuf_3_3 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $guard (send_to_4) noblock_obuf_3_4 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $report (inputPort_3_Daemon write_status 			 send_to_1 send_to_1 			 send_to_2 send_to_2 			 send_to_3 send_to_3 			 send_to_4 send_to_4 			 data_to_outport data_to_outport 			 new_packet new_packet 			 last_dest_id last_dest_id 			 next_last_dest_id next_last_dest_id 			 count_down count_down )
+    $while 1 
+  }
+}
+$module [inputPort_4_Daemon]
+$in ()
+$out ()
+$is
+{
+  $branchblock [loop]
+  {
+    $dopipeline $depth 7 $buffering 1
+    $fullrate 
+    $merge $entry $loopback 
+    $phi count_down := 			  ZERO_16 $on   $entry 			  next_count_down $on   $loopback 
+    // type of target is $uint<16>
+    $phi input_word := 			  in_data_4 $on   $entry ,   $loopback 
+    // type of target is $uint<32>
+    $phi last_dest_id := 			  0  $on   $entry 			  next_last_dest_id $on   $loopback 
+    // type of target is $uint<8>
+    $endmerge
+    $report (inputPort_4_Daemon received_input_word 			 input_word input_word )
+    $volatile new_packet := (count_down == 0 ) $buffering 1
+    $volatile dest_id := ( $slice input_word 31 24 )  $buffering 1
+    $volatile pkt_length := ( $slice input_word 23 8 )  $buffering 1
+    $volatile seq_id := ( $slice input_word 7 0 )  $buffering 1
+    $guard (new_packet) $report (inputPort_4_Daemon new_packet_summary 			 dest_id dest_id 			 pkt_length pkt_length 			 seq_id seq_id )
+    $volatile next_count_down := ( $mux new_packet (pkt_length - 1 )  (count_down - 1 ) )  $buffering 1
+    $volatile next_last_dest_id := ( $mux new_packet dest_id  last_dest_id )  $buffering 1
+    $volatile data_to_outport := (ONE_1 && input_word) $buffering 1
+    $volatile continue := ( $call updateCounter (3  (next_last_dest_id - 1 ) ($bitcast ($uint<1>) _b1 ) ) ) $buffering 1
+    $volatile send_to_1 := ((next_last_dest_id == 1 ) & continue) $buffering 1
+    $volatile send_to_2 := ((next_last_dest_id == 2 ) & continue) $buffering 1
+    $volatile send_to_3 := ((next_last_dest_id == 3 ) & continue) $buffering 1
+    $volatile send_to_4 := ((next_last_dest_id == 4 ) & continue) $buffering 1
+    $guard (send_to_1) noblock_obuf_4_1 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $guard (send_to_2) noblock_obuf_4_2 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $guard (send_to_3) noblock_obuf_4_3 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $guard (send_to_4) noblock_obuf_4_4 := data_to_outport $buffering 1// bits of buffering = 33. 
+    $report (inputPort_4_Daemon write_status 			 send_to_1 send_to_1 			 send_to_2 send_to_2 			 send_to_3 send_to_3 			 send_to_4 send_to_4 			 data_to_outport data_to_outport 			 new_packet new_packet 			 last_dest_id last_dest_id 			 next_last_dest_id next_last_dest_id 			 count_down count_down )
+    $while 1 
+  }
+}
+$volatile $module [prioritySelect]
+$in ( down_counter : $uint<8>   active_packet : $uint<3>   priority_index : $uint<2>   p1_valid : $uint<1>   p2_valid : $uint<1>   p3_valid : $uint<1>   p4_valid : $uint<1>  )
+$out ( next_active_packet : $uint<3>   next_priority_index : $uint<2>  )
+$is
+{
+  d0 := (down_counter == 0 ) $buffering 1
+  $volatile priority_1_validity := ((( $mux (priority_index == 0 ) p1_valid  _b0  )  | ( $mux (priority_index == 1 ) p2_valid  _b0  ) ) | (( $mux (priority_index == 2 ) p3_valid  _b0  )  | ( $mux (priority_index == 3 ) p4_valid  _b0  ) )) $buffering 1
+  $volatile priority_2_validity := ((( $mux (priority_index == 0 ) p2_valid  _b0  )  | ( $mux (priority_index == 1 ) p3_valid  _b0  ) ) | (( $mux (priority_index == 2 ) p4_valid  _b0  )  | ( $mux (priority_index == 3 ) p1_valid  _b0  ) )) $buffering 1
+  $volatile priority_3_validity := ((( $mux (priority_index == 0 ) p3_valid  _b0  )  | ( $mux (priority_index == 1 ) p4_valid  _b0  ) ) | (( $mux (priority_index == 2 ) p1_valid  _b0  )  | ( $mux (priority_index == 3 ) p2_valid  _b0  ) )) $buffering 1
+  $volatile priority_4_validity := ((( $mux (priority_index == 0 ) p4_valid  _b0  )  | ( $mux (priority_index == 1 ) p1_valid  _b0  ) ) | (( $mux (priority_index == 2 ) p2_valid  _b0  )  | ( $mux (priority_index == 3 ) p3_valid  _b0  ) )) $buffering 1
+  select_first_priority := (d0 & priority_1_validity) $buffering 1
+  select_second_priority := (d0 & priority_2_validity) $buffering 1
+  select_third_priority := (d0 & priority_3_validity) $buffering 1
+  select_fourth_priority := (d0 & priority_4_validity) $buffering 1
+  next_active_packet := ( $mux ( ~ d0 ) active_packet  ( $mux select_first_priority ((ZERO_1 && priority_index) + 1 )  ( $mux select_second_priority ((ZERO_1 && (priority_index + 1 )) + 1 )  ( $mux select_third_priority ((ZERO_1 && (priority_index + 2 )) + 1 )  ( $mux select_fourth_priority ((ZERO_1 && (priority_index + 3 )) + 1 )  0  )  )  )  )  )  $buffering 1
+  next_priority_index := ( $mux ( ~ d0 ) priority_index  ( $mux select_first_priority (priority_index + 1 )  ( $mux select_second_priority (priority_index + 2 )  ( $mux select_third_priority (priority_index + 3 )  ( $mux select_fourth_priority (priority_index + 4 )  priority_index )  )  )  )  )  $buffering 1
+}
+$module [outputPort_1_Daemon]
+$in ()
+$out ()
+$is
+{
+  $branchblock [loop]
+  {
+    $dopipeline $depth 7 $buffering 1
+    $fullrate 
+    $merge $entry $loopback 
+    $phi down_counter := 			  ZERO_8 $on   $entry 			  next_down_counter $on   $loopback 
+    // type of target is $uint<8>
+    $phi pkt_1_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_1) noblock_obuf_1_1 $on   $loopback 
+    // type of target is $uint<33>
+    $phi pkt_2_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_2) noblock_obuf_2_1 $on   $loopback 
+    // type of target is $uint<33>
+    $phi pkt_3_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_3) noblock_obuf_3_1 $on   $loopback 
+    // type of target is $uint<33>
+    $phi pkt_4_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_4) noblock_obuf_4_1 $on   $loopback 
+    // type of target is $uint<33>
+    $phi active_packet := 			  ZERO_3 $on   $entry 			  next_active_packet $on   $loopback 
+    // type of target is $uint<3>
+    $phi active_packet_length := 			  ZERO_8 $on   $entry 			  next_active_packet_length $on   $loopback 
+    // type of target is $uint<8>
+    $phi priority_index := 			  ZERO_2 $on   $entry 			  next_priority_index $on   $loopback 
+    // type of target is $uint<2>
+    $endmerge
+    $volatile senderPort := ((( $mux read_from_1 0   _b0  )  | ( $mux read_from_2 1   _b0  ) ) | (( $mux read_from_3 2   _b0  )  | ( $mux read_from_4 3   _b0  ) )) $buffering 1
+    $call updateCounter (senderPort 0  ($bitcast ($uint<1>) _b0 ) ) (continue ) 
+    $volatile p1_valid := (pkt_1_e_word [] 32 ) $buffering 1
+    $volatile p2_valid := (pkt_2_e_word [] 32 ) $buffering 1
+    $volatile p3_valid := (pkt_3_e_word [] 32 ) $buffering 1
+    $volatile p4_valid := (pkt_4_e_word [] 32 ) $buffering 1
+    $report (outputPort_1_Daemon state_summary 			 active_packet active_packet 			 down_counter down_counter 			 priority_index priority_index 			 read_from_1 read_from_1 			 pkt_1_e_word pkt_1_e_word 			 read_from_2 read_from_2 			 pkt_2_e_word pkt_2_e_word 			 read_from_3 read_from_3 			 pkt_3_e_word pkt_3_e_word 			 read_from_4 read_from_4 			 pkt_4_e_word pkt_4_e_word )
+    $volatile valid_active_pkt_word_read := ((( $mux (active_packet == 1 ) p1_valid  _b0  )  | ( $mux (active_packet == 2 ) p2_valid  _b0  ) ) | (( $mux (active_packet == 3 ) p3_valid  _b0  )  | ( $mux (active_packet == 4 ) p4_valid  _b0  ) )) $buffering 1
+    $volatile 			$call prioritySelect (down_counter active_packet priority_index p1_valid p2_valid p3_valid p4_valid ) (next_active_packet next_priority_index ) 
+    $volatile started_new_packet := ((next_active_packet != 0 ) & (down_counter == 0 )) $buffering 1
+    $volatile next_active_packet_length := ( $mux started_new_packet ((( $mux (next_active_packet == 1 ) ( $slice pkt_1_e_word 15 8 )   _b0  )  | ( $mux (next_active_packet == 2 ) ( $slice pkt_2_e_word 15 8 )   _b0  ) ) | (( $mux (next_active_packet == 3 ) ( $slice pkt_3_e_word 15 8 )   _b0  )  | ( $mux (next_active_packet == 4 ) ( $slice pkt_4_e_word 15 8 )   _b0  ) ))  active_packet_length )  $buffering 1
+    $volatile next_down_counter := ( $mux started_new_packet (next_active_packet_length - 1 )  ( $mux valid_active_pkt_word_read (down_counter - 1 )  down_counter )  )  $buffering 1
+    $volatile read_from_1 := (( ~ p1_valid ) | (next_active_packet == 1 )) $buffering 1
+    $volatile read_from_2 := (( ~ p2_valid ) | (next_active_packet == 2 )) $buffering 1
+    $volatile read_from_3 := (( ~ p3_valid ) | (next_active_packet == 3 )) $buffering 1
+    $volatile read_from_4 := (( ~ p4_valid ) | (next_active_packet == 4 )) $buffering 1
+    $volatile data_to_out := ((( $mux (next_active_packet == 1 ) ( $slice pkt_1_e_word 31 0 )   _b0  )  | ( $mux (next_active_packet == 2 ) ( $slice pkt_2_e_word 31 0 )   _b0  ) ) | (( $mux (next_active_packet == 3 ) ( $slice pkt_3_e_word 31 0 )   _b0  )  | ( $mux (next_active_packet == 4 ) ( $slice pkt_4_e_word 31 0 )   _b0  ) )) $buffering 1
+    $volatile send_flag := ((( $mux (next_active_packet == 1 ) p1_valid  _b0  )  | ( $mux (next_active_packet == 2 ) p2_valid  _b0  ) ) | (( $mux (next_active_packet == 3 ) p3_valid  _b0  )  | ( $mux (next_active_packet == 4 ) p4_valid  _b0  ) )) $buffering 1
+    $guard (send_flag) out_data_1 := data_to_out $buffering 1// bits of buffering = 32. 
+    $report (outputPort_1_Daemon send_information 			 started_new_packet started_new_packet 			 next_active_packet next_active_packet 			 send_flag send_flag 			 p1_valid p1_valid 			 p2_valid p2_valid 			 p3_valid p3_valid 			 p4_valid p4_valid 			 data_to_out data_to_out )
+    $while 1 
+  }
+}
+$module [outputPort_2_Daemon]
+$in ()
+$out ()
+$is
+{
+  $branchblock [loop]
+  {
+    $dopipeline $depth 7 $buffering 1
+    $fullrate 
+    $merge $entry $loopback 
+    $phi down_counter := 			  ZERO_8 $on   $entry 			  next_down_counter $on   $loopback 
+    // type of target is $uint<8>
+    $phi pkt_1_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_1) noblock_obuf_1_2 $on   $loopback 
+    // type of target is $uint<33>
+    $phi pkt_2_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_2) noblock_obuf_2_2 $on   $loopback 
+    // type of target is $uint<33>
+    $phi pkt_3_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_3) noblock_obuf_3_2 $on   $loopback 
+    // type of target is $uint<33>
+    $phi pkt_4_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_4) noblock_obuf_4_2 $on   $loopback 
+    // type of target is $uint<33>
+    $phi active_packet := 			  ZERO_3 $on   $entry 			  next_active_packet $on   $loopback 
+    // type of target is $uint<3>
+    $phi active_packet_length := 			  ZERO_8 $on   $entry 			  next_active_packet_length $on   $loopback 
+    // type of target is $uint<8>
+    $phi priority_index := 			  ZERO_2 $on   $entry 			  next_priority_index $on   $loopback 
+    // type of target is $uint<2>
+    $endmerge
+    $volatile senderPort := ((( $mux read_from_1 0   _b0  )  | ( $mux read_from_2 1   _b0  ) ) | (( $mux read_from_3 2   _b0  )  | ( $mux read_from_4 3   _b0  ) )) $buffering 1
+    $call updateCounter (senderPort 1  ($bitcast ($uint<1>) _b0 ) ) (continue ) 
+    $volatile p1_valid := (pkt_1_e_word [] 32 ) $buffering 1
+    $volatile p2_valid := (pkt_2_e_word [] 32 ) $buffering 1
+    $volatile p3_valid := (pkt_3_e_word [] 32 ) $buffering 1
+    $volatile p4_valid := (pkt_4_e_word [] 32 ) $buffering 1
+    $report (outputPort_2_Daemon state_summary 			 active_packet active_packet 			 down_counter down_counter 			 priority_index priority_index 			 read_from_1 read_from_1 			 pkt_1_e_word pkt_1_e_word 			 read_from_2 read_from_2 			 pkt_2_e_word pkt_2_e_word 			 read_from_3 read_from_3 			 pkt_3_e_word pkt_3_e_word 			 read_from_4 read_from_4 			 pkt_4_e_word pkt_4_e_word )
+    $volatile valid_active_pkt_word_read := ((( $mux (active_packet == 1 ) p1_valid  _b0  )  | ( $mux (active_packet == 2 ) p2_valid  _b0  ) ) | (( $mux (active_packet == 3 ) p3_valid  _b0  )  | ( $mux (active_packet == 4 ) p4_valid  _b0  ) )) $buffering 1
+    $volatile 			$call prioritySelect (down_counter active_packet priority_index p1_valid p2_valid p3_valid p4_valid ) (next_active_packet next_priority_index ) 
+    $volatile started_new_packet := ((next_active_packet != 0 ) & (down_counter == 0 )) $buffering 1
+    $volatile next_active_packet_length := ( $mux started_new_packet ((( $mux (next_active_packet == 1 ) ( $slice pkt_1_e_word 15 8 )   _b0  )  | ( $mux (next_active_packet == 2 ) ( $slice pkt_2_e_word 15 8 )   _b0  ) ) | (( $mux (next_active_packet == 3 ) ( $slice pkt_3_e_word 15 8 )   _b0  )  | ( $mux (next_active_packet == 4 ) ( $slice pkt_4_e_word 15 8 )   _b0  ) ))  active_packet_length )  $buffering 1
+    $volatile next_down_counter := ( $mux started_new_packet (next_active_packet_length - 1 )  ( $mux valid_active_pkt_word_read (down_counter - 1 )  down_counter )  )  $buffering 1
+    $volatile read_from_1 := (( ~ p1_valid ) | (next_active_packet == 1 )) $buffering 1
+    $volatile read_from_2 := (( ~ p2_valid ) | (next_active_packet == 2 )) $buffering 1
+    $volatile read_from_3 := (( ~ p3_valid ) | (next_active_packet == 3 )) $buffering 1
+    $volatile read_from_4 := (( ~ p4_valid ) | (next_active_packet == 4 )) $buffering 1
+    $volatile data_to_out := ((( $mux (next_active_packet == 1 ) ( $slice pkt_1_e_word 31 0 )   _b0  )  | ( $mux (next_active_packet == 2 ) ( $slice pkt_2_e_word 31 0 )   _b0  ) ) | (( $mux (next_active_packet == 3 ) ( $slice pkt_3_e_word 31 0 )   _b0  )  | ( $mux (next_active_packet == 4 ) ( $slice pkt_4_e_word 31 0 )   _b0  ) )) $buffering 1
+    $volatile send_flag := ((( $mux (next_active_packet == 1 ) p1_valid  _b0  )  | ( $mux (next_active_packet == 2 ) p2_valid  _b0  ) ) | (( $mux (next_active_packet == 3 ) p3_valid  _b0  )  | ( $mux (next_active_packet == 4 ) p4_valid  _b0  ) )) $buffering 1
+    $guard (send_flag) out_data_2 := data_to_out $buffering 1// bits of buffering = 32. 
+    $report (outputPort_2_Daemon send_information 			 started_new_packet started_new_packet 			 next_active_packet next_active_packet 			 send_flag send_flag 			 p1_valid p1_valid 			 p2_valid p2_valid 			 p3_valid p3_valid 			 p4_valid p4_valid 			 data_to_out data_to_out )
+    $while 1 
+  }
+}
+$module [outputPort_3_Daemon]
+$in ()
+$out ()
+$is
+{
+  $branchblock [loop]
+  {
+    $dopipeline $depth 7 $buffering 1
+    $fullrate 
+    $merge $entry $loopback 
+    $phi down_counter := 			  ZERO_8 $on   $entry 			  next_down_counter $on   $loopback 
+    // type of target is $uint<8>
+    $phi pkt_1_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_1) noblock_obuf_1_3 $on   $loopback 
+    // type of target is $uint<33>
+    $phi pkt_2_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_2) noblock_obuf_2_3 $on   $loopback 
+    // type of target is $uint<33>
+    $phi pkt_3_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_3) noblock_obuf_3_3 $on   $loopback 
+    // type of target is $uint<33>
+    $phi pkt_4_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_4) noblock_obuf_4_3 $on   $loopback 
+    // type of target is $uint<33>
+    $phi active_packet := 			  ZERO_3 $on   $entry 			  next_active_packet $on   $loopback 
+    // type of target is $uint<3>
+    $phi active_packet_length := 			  ZERO_8 $on   $entry 			  next_active_packet_length $on   $loopback 
+    // type of target is $uint<8>
+    $phi priority_index := 			  next_priority_index $on   $loopback 			  ZERO_2 $on   $entry 
+    // type of target is $uint<2>
+    $endmerge
+    $volatile senderPort := ((( $mux read_from_1 0   _b0  )  | ( $mux read_from_2 1   _b0  ) ) | (( $mux read_from_3 2   _b0  )  | ( $mux read_from_4 3   _b0  ) )) $buffering 1
+    $call updateCounter (senderPort 2  ($bitcast ($uint<1>) _b0 ) ) (continue ) 
+    $volatile p1_valid := (pkt_1_e_word [] 32 ) $buffering 1
+    $volatile p2_valid := (pkt_2_e_word [] 32 ) $buffering 1
+    $volatile p3_valid := (pkt_3_e_word [] 32 ) $buffering 1
+    $volatile p4_valid := (pkt_4_e_word [] 32 ) $buffering 1
+    $report (outputPort_3_Daemon state_summary 			 active_packet active_packet 			 down_counter down_counter 			 priority_index priority_index 			 read_from_1 read_from_1 			 pkt_1_e_word pkt_1_e_word 			 read_from_2 read_from_2 			 pkt_2_e_word pkt_2_e_word 			 read_from_3 read_from_3 			 pkt_3_e_word pkt_3_e_word 			 read_from_4 read_from_4 			 pkt_4_e_word pkt_4_e_word )
+    $volatile valid_active_pkt_word_read := ((( $mux (active_packet == 1 ) p1_valid  _b0  )  | ( $mux (active_packet == 2 ) p2_valid  _b0  ) ) | (( $mux (active_packet == 3 ) p3_valid  _b0  )  | ( $mux (active_packet == 4 ) p4_valid  _b0  ) )) $buffering 1
+    $volatile 			$call prioritySelect (down_counter active_packet priority_index p1_valid p2_valid p3_valid p4_valid ) (next_active_packet next_priority_index ) 
+    $volatile started_new_packet := ((next_active_packet != 0 ) & (down_counter == 0 )) $buffering 1
+    $volatile next_active_packet_length := ( $mux started_new_packet ((( $mux (next_active_packet == 1 ) ( $slice pkt_1_e_word 15 8 )   _b0  )  | ( $mux (next_active_packet == 2 ) ( $slice pkt_2_e_word 15 8 )   _b0  ) ) | (( $mux (next_active_packet == 3 ) ( $slice pkt_3_e_word 15 8 )   _b0  )  | ( $mux (next_active_packet == 4 ) ( $slice pkt_4_e_word 15 8 )   _b0  ) ))  active_packet_length )  $buffering 1
+    $volatile next_down_counter := ( $mux started_new_packet (next_active_packet_length - 1 )  ( $mux valid_active_pkt_word_read (down_counter - 1 )  down_counter )  )  $buffering 1
+    $volatile read_from_1 := (( ~ p1_valid ) | (next_active_packet == 1 )) $buffering 1
+    $volatile read_from_2 := (( ~ p2_valid ) | (next_active_packet == 2 )) $buffering 1
+    $volatile read_from_3 := (( ~ p3_valid ) | (next_active_packet == 3 )) $buffering 1
+    $volatile read_from_4 := (( ~ p4_valid ) | (next_active_packet == 4 )) $buffering 1
+    $volatile data_to_out := ((( $mux (next_active_packet == 1 ) ( $slice pkt_1_e_word 31 0 )   _b0  )  | ( $mux (next_active_packet == 2 ) ( $slice pkt_2_e_word 31 0 )   _b0  ) ) | (( $mux (next_active_packet == 3 ) ( $slice pkt_3_e_word 31 0 )   _b0  )  | ( $mux (next_active_packet == 4 ) ( $slice pkt_4_e_word 31 0 )   _b0  ) )) $buffering 1
+    $volatile send_flag := ((( $mux (next_active_packet == 1 ) p1_valid  _b0  )  | ( $mux (next_active_packet == 2 ) p2_valid  _b0  ) ) | (( $mux (next_active_packet == 3 ) p3_valid  _b0  )  | ( $mux (next_active_packet == 4 ) p4_valid  _b0  ) )) $buffering 1
+    $guard (send_flag) out_data_3 := data_to_out $buffering 1// bits of buffering = 32. 
+    $report (outputPort_3_Daemon send_information 			 started_new_packet started_new_packet 			 next_active_packet next_active_packet 			 send_flag send_flag 			 p1_valid p1_valid 			 p2_valid p2_valid 			 p3_valid p3_valid 			 p4_valid p4_valid 			 data_to_out data_to_out )
+    $while 1 
+  }
+}
+$module [outputPort_4_Daemon]
+$in ()
+$out ()
+$is
+{
+  $branchblock [loop]
+  {
+    $dopipeline $depth 7 $buffering 1
+    $fullrate 
+    $merge $entry $loopback 
+    $phi down_counter := 			  ZERO_8 $on   $entry 			  next_down_counter $on   $loopback 
+    // type of target is $uint<8>
+    $phi pkt_1_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_1) noblock_obuf_1_4 $on   $loopback 
+    // type of target is $uint<33>
+    $phi pkt_2_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_2) noblock_obuf_2_4 $on   $loopback 
+    // type of target is $uint<33>
+    $phi pkt_3_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_3) noblock_obuf_3_4 $on   $loopback 
+    // type of target is $uint<33>
+    $phi pkt_4_e_word := 			  ZERO_33 $on   $entry 			  $guard (read_from_4) noblock_obuf_4_4 $on   $loopback 
+    // type of target is $uint<33>
+    $phi active_packet := 			  ZERO_3 $on   $entry 			  next_active_packet $on   $loopback 
+    // type of target is $uint<3>
+    $phi active_packet_length := 			  ZERO_8 $on   $entry 			  next_active_packet_length $on   $loopback 
+    // type of target is $uint<8>
+    $phi priority_index := 			  ZERO_2 $on   $entry 			  next_priority_index $on   $loopback 
+    // type of target is $uint<2>
+    $endmerge
+    $volatile senderPort := ((( $mux read_from_1 0   _b0  )  | ( $mux read_from_2 1   _b0  ) ) | (( $mux read_from_3 2   _b0  )  | ( $mux read_from_4 3   _b0  ) )) $buffering 1
+    $call updateCounter (senderPort 3  ($bitcast ($uint<1>) _b0 ) ) (continue ) 
+    $volatile p1_valid := (pkt_1_e_word [] 32 ) $buffering 1
+    $volatile p2_valid := (pkt_2_e_word [] 32 ) $buffering 1
+    $volatile p3_valid := (pkt_3_e_word [] 32 ) $buffering 1
+    $volatile p4_valid := (pkt_4_e_word [] 32 ) $buffering 1
+    $report (outputPort_4_Daemon state_summary 			 active_packet active_packet 			 down_counter down_counter 			 priority_index priority_index 			 read_from_1 read_from_1 			 pkt_1_e_word pkt_1_e_word 			 read_from_2 read_from_2 			 pkt_2_e_word pkt_2_e_word 			 read_from_3 read_from_3 			 pkt_3_e_word pkt_3_e_word 			 read_from_4 read_from_4 			 pkt_4_e_word pkt_4_e_word )
+    $volatile valid_active_pkt_word_read := ((( $mux (active_packet == 1 ) p1_valid  _b0  )  | ( $mux (active_packet == 2 ) p2_valid  _b0  ) ) | (( $mux (active_packet == 3 ) p3_valid  _b0  )  | ( $mux (active_packet == 4 ) p4_valid  _b0  ) )) $buffering 1
+    $volatile 			$call prioritySelect (down_counter active_packet priority_index p1_valid p2_valid p3_valid p4_valid ) (next_active_packet next_priority_index ) 
+    $volatile started_new_packet := ((next_active_packet != 0 ) & (down_counter == 0 )) $buffering 1
+    $volatile next_active_packet_length := ( $mux started_new_packet ((( $mux (next_active_packet == 1 ) ( $slice pkt_1_e_word 15 8 )   _b0  )  | ( $mux (next_active_packet == 2 ) ( $slice pkt_2_e_word 15 8 )   _b0  ) ) | (( $mux (next_active_packet == 3 ) ( $slice pkt_3_e_word 15 8 )   _b0  )  | ( $mux (next_active_packet == 4 ) ( $slice pkt_4_e_word 15 8 )   _b0  ) ))  active_packet_length )  $buffering 1
+    $volatile next_down_counter := ( $mux started_new_packet (next_active_packet_length - 1 )  ( $mux valid_active_pkt_word_read (down_counter - 1 )  down_counter )  )  $buffering 1
+    $volatile read_from_1 := (( ~ p1_valid ) | (next_active_packet == 1 )) $buffering 1
+    $volatile read_from_2 := (( ~ p2_valid ) | (next_active_packet == 2 )) $buffering 1
+    $volatile read_from_3 := (( ~ p3_valid ) | (next_active_packet == 3 )) $buffering 1
+    $volatile read_from_4 := (( ~ p4_valid ) | (next_active_packet == 4 )) $buffering 1
+    $volatile data_to_out := ((( $mux (next_active_packet == 1 ) ( $slice pkt_1_e_word 31 0 )   _b0  )  | ( $mux (next_active_packet == 2 ) ( $slice pkt_2_e_word 31 0 )   _b0  ) ) | (( $mux (next_active_packet == 3 ) ( $slice pkt_3_e_word 31 0 )   _b0  )  | ( $mux (next_active_packet == 4 ) ( $slice pkt_4_e_word 31 0 )   _b0  ) )) $buffering 1
+    $volatile send_flag := ((( $mux (next_active_packet == 1 ) p1_valid  _b0  )  | ( $mux (next_active_packet == 2 ) p2_valid  _b0  ) ) | (( $mux (next_active_packet == 3 ) p3_valid  _b0  )  | ( $mux (next_active_packet == 4 ) p4_valid  _b0  ) )) $buffering 1
+    $guard (send_flag) out_data_4 := data_to_out $buffering 1// bits of buffering = 32. 
+    $report (outputPort_4_Daemon send_information 			 started_new_packet started_new_packet 			 next_active_packet next_active_packet 			 send_flag send_flag 			 p1_valid p1_valid 			 p2_valid p2_valid 			 p3_valid p3_valid 			 p4_valid p4_valid 			 data_to_out data_to_out )
+    $while 1 
+  }
+}
+// Memory space 0: obuf_semaphore 
+// use of gated clocks in modules 

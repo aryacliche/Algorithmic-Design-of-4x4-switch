@@ -74,3 +74,62 @@ $is
 							select_fourth_priority (priority_index + 4)
 							$default priority_index) // This means that nobody had a valid packet to deliver
 }
+
+$module [updateCounter]
+	$in (input_port output_port : $uint<8>
+			up : $uint<1>
+			valid : $uint<1>) // valid is 1 if the request is valid, 0 if you're just kidding
+	$out (continue : $uint<1>)
+$is 	// inputDaemon will run this before pushing to the pipe, outputDaemon will run this after reading from the pipe (in the later case, the continue flag doesn't matter)
+{	
+	// down = ~up
+	// if obuf_semaphore[input_port][output_port] = 128 and up:
+	//		continue = 0
+	// if obuf_semaphore[input_port][output_port] = 0 and down:
+	//		continue = 0
+	// if obuf_semaphore[input_port][output_port] != 128 and up:
+	//		continue = 1
+	//		obuf_semaphore[input_port][output_port] ++
+	// if obuf_semaphore[input_port][output_port] != 0 and down:
+	//		continue = 1
+	//		obuf_semaphore[input_port][output_port] --
+	
+	$volatile down := (~up)
+
+	$volatile continue := ($excmux 
+						((obuf_semaphore[input_port][output_port] > 127) & (down == 1)) 	1
+						((obuf_semaphore[input_port][output_port] < 1) & (up == 1)) 	1
+						((obuf_semaphore[input_port][output_port] == 128) & (up == 1)) 	0
+						((obuf_semaphore[input_port][output_port] == 0) & (down == 1)) 	0
+						)
+
+	obuf_semaphore[input_port][output_port] := ($excmux 
+						(continue & (down == 1)) 	(obuf_semaphore[input_port][output_port] - 1)
+						(continue & (up == 1)) 		(obuf_semaphore[input_port][output_port] + 1)
+						(~continue) 				obuf_semaphore[input_port][output_port]
+						)
+}
+
+$module [initialiseCounters]
+	$in () 
+	$out ()
+$is 	// This will have to be run initially to ensure that the semaphores are put to 0 initially.
+{	
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+		
+		$branchblock[loop] {
+			$merge $entry J_loopback 
+				$phi J := $zero<8> $on $entry nJ $on J_loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			obuf_semaphore[I][J] := ZERO_2
+			$if (J < 3) $then $place [J_loopback] $endif
+		}
+	
+		$if (I < 3) $then $place [I_loopback] $endif
+	}
+}

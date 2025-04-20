@@ -37,13 +37,13 @@ while(1) {
      send_to_2    = (last_dest_id == 2);
      send_to_3    = (last_dest_id == 3);
      send_to_4    = (last_dest_id == 4);
-     if(send_to_1)
+     if(send_to_1 & buffer_free(1))
           write_uint32("obuf_1_1", input_word);
-     if(send_to_2)
+     if(send_to_2 & buffer_free(2))
           write_uint32("obuf_1_2", input_word);
-     if(send_to_3)
+     if(send_to_3 & buffer_free(3))
           write_uint32("obuf_1_3", input_word);
-     if(send_to_4)
+     if(send_to_4 & buffer_free(4))
           write_uint32("obuf_1_4", input_word);
 }
 ```
@@ -53,12 +53,16 @@ This is written by tweaking the commented C code provided for the 2x2 switch cas
 The output daemon is also a simple extension of the logic found in 2x2 switch.
 
 ## prioritySelect
+### Round-robin implementation
 Priority is no longer a simple boolean value. We need to maintain a pointer to keep track of the history. 
 - The pointer (`priority_index`) points to the first buffer at the start
 - We move the pointer to the next available buffer (`priority_index + x` where `x` can be 0, 1, 2, 3)[^1] after the current packet is processed (i.e. `down_counter==0`). Else, we sustain its value.
 - In order to keep a track of the next available buffer, we have simple combinational logic which takes the buffer valid bits as well as `priority_index` as inputs.
 - All of this is implemented in `utils.aa` as part of the `prioritySelect`. This gives us the next packet to use as well as next `priority_index`.
-
+### Fair Queue (FQ)
+**Need to finish this**
+## Miscellaneous
+			
 
 
 [^1]: Note that `priority_index` is a 2-bit register thus even with this, the value always remains between 0 and 3.

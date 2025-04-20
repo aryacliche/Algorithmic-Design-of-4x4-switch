@@ -281,7 +281,8 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	// tb_config.input_port_active[1] = 0;
+	initialiseCounters();
+	fprintf(stderr, "Done reseting all semaphores...\n");
 
 #ifndef COMPILE_TEST_ONLY
 #ifdef AA2C

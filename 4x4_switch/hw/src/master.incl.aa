@@ -4,6 +4,7 @@
 
 
 
+
 // GENERIC with MACROS
 //   INPUTPORTDAEMON   
 //   INPUT_PORT
@@ -82,11 +83,15 @@ $module [ inputPort_1_Daemon ]
 
 			// add valid bit for noblock.
 			$volatile data_to_outport := ($concat ONE_1 input_word)
+			
+			$volatile continue := ( $call updateCounter (0 (next_last_dest_id - 1) $one<1>) )
 
-			$volatile send_to_1 := (next_last_dest_id == 1)
-			$volatile send_to_2 := (next_last_dest_id == 2)
-			$volatile send_to_3 := (next_last_dest_id == 3)
-			$volatile send_to_4 := (next_last_dest_id == 4)
+			$volatile send_to_1 := ((next_last_dest_id == 1) & continue)
+			$volatile send_to_2 := ((next_last_dest_id == 2) & continue)
+			$volatile send_to_3 := ((next_last_dest_id == 3) & continue)
+			$volatile send_to_4 := ((next_last_dest_id == 4) & continue)
+			
+			
 			$guard (send_to_1)
 				noblock_obuf_1_1 := data_to_outport
 
@@ -105,6 +110,7 @@ $module [ inputPort_1_Daemon ]
 		$while 1
 	}
 }
+
 
 
 
@@ -193,11 +199,15 @@ $module [ inputPort_2_Daemon ]
 
 			// add valid bit for noblock.
 			$volatile data_to_outport := ($concat ONE_1 input_word)
+			
+			$volatile continue := ( $call updateCounter (1 (next_last_dest_id - 1) $one<1>) )
 
-			$volatile send_to_1 := (next_last_dest_id == 1)
-			$volatile send_to_2 := (next_last_dest_id == 2)
-			$volatile send_to_3 := (next_last_dest_id == 3)
-			$volatile send_to_4 := (next_last_dest_id == 4)
+			$volatile send_to_1 := ((next_last_dest_id == 1) & continue)
+			$volatile send_to_2 := ((next_last_dest_id == 2) & continue)
+			$volatile send_to_3 := ((next_last_dest_id == 3) & continue)
+			$volatile send_to_4 := ((next_last_dest_id == 4) & continue)
+			
+			
 			$guard (send_to_1)
 				noblock_obuf_2_1 := data_to_outport
 
@@ -216,6 +226,7 @@ $module [ inputPort_2_Daemon ]
 		$while 1
 	}
 }
+
 
 
 
@@ -304,11 +315,15 @@ $module [ inputPort_3_Daemon ]
 
 			// add valid bit for noblock.
 			$volatile data_to_outport := ($concat ONE_1 input_word)
+			
+			$volatile continue := ( $call updateCounter (2 (next_last_dest_id - 1) $one<1>) )
 
-			$volatile send_to_1 := (next_last_dest_id == 1)
-			$volatile send_to_2 := (next_last_dest_id == 2)
-			$volatile send_to_3 := (next_last_dest_id == 3)
-			$volatile send_to_4 := (next_last_dest_id == 4)
+			$volatile send_to_1 := ((next_last_dest_id == 1) & continue)
+			$volatile send_to_2 := ((next_last_dest_id == 2) & continue)
+			$volatile send_to_3 := ((next_last_dest_id == 3) & continue)
+			$volatile send_to_4 := ((next_last_dest_id == 4) & continue)
+			
+			
 			$guard (send_to_1)
 				noblock_obuf_3_1 := data_to_outport
 
@@ -327,6 +342,7 @@ $module [ inputPort_3_Daemon ]
 		$while 1
 	}
 }
+
 
 
 
@@ -415,11 +431,15 @@ $module [ inputPort_4_Daemon ]
 
 			// add valid bit for noblock.
 			$volatile data_to_outport := ($concat ONE_1 input_word)
+			
+			$volatile continue := ( $call updateCounter (3 (next_last_dest_id - 1) $one<1>) )
 
-			$volatile send_to_1 := (next_last_dest_id == 1)
-			$volatile send_to_2 := (next_last_dest_id == 2)
-			$volatile send_to_3 := (next_last_dest_id == 3)
-			$volatile send_to_4 := (next_last_dest_id == 4)
+			$volatile send_to_1 := ((next_last_dest_id == 1) & continue)
+			$volatile send_to_2 := ((next_last_dest_id == 2) & continue)
+			$volatile send_to_3 := ((next_last_dest_id == 3) & continue)
+			$volatile send_to_4 := ((next_last_dest_id == 4) & continue)
+			
+			
 			$guard (send_to_1)
 				noblock_obuf_4_1 := data_to_outport
 
@@ -450,6 +470,7 @@ $module [ inputPort_4_Daemon ]
 
 
 
+
 // GENERIC CODE WITH MACROS.
 //
 //   OUTPUTPORTDAEMON
@@ -463,67 +484,7 @@ $module [ outputPort_1_Daemon ]
 	$in () $out () $is
 {
 	$branchblock[loop] {
-		//
-		// pkt_1_waiting = 0;
-		// pkt_2_waiting = 0;
-		// pkt_1_has_priority = 0;
-		// down_counter = 0;
-		// active_packet = 0;
-		// while(1)
-		// {
-		//      read_from_1 = (!pkt_1_waiting || 
-		//                            ((down_counter == 0) || (active_packet == 1)))
-		//      read_from_2 = (!pkt_2_waiting || 
-		//                            ((down_counter == 0) || (active_packet == 2)))
-		//	if(read_from_1)
-		//	{
-		//		// NOTE: must be non-blocking read..  why?
-		//		pkt_1_word = obuf_1_1
-		//	}
-		//      if(read_from_2)
-		// 	{
-		//		// NOTE: must be non-blocking read..  why?
-		//		pkt_2_word = obuf_2_1
-		//	}
-		//
-		//     	selected_packet, next_pkt_1_has_priority = 
-		//		priority_select (down_counter, active_packet,
-		//					pkt_1_has_priority,
-		//					pkt_1_word, 
-		//					pkt_2_word); 
-		//      next_active_packet = 
-		//		($mux (down_counter == 0) selected_packet active_packet)
-		//	next_down_counter = 
-		//		((down_counter == 0)   ?
-		//			pktLength(next_active_packet, pkt_1_word, pkt_2_word) :
-		//			(down_counter - 1));
-		//
-		//	// next packet waiting
-		//           - if pkt is waiting but not active, it stays waiting.
-		//	     - if pkt is waiting but active, stays waiting if valid and down_count==0
-		//	     - if pkt is not waiting, becomes waiting if valid.
-		//	next_pkt_1_waiting =
-		//		(pkt_1_waiting ? 
-		//			((active_packet != 1)  ? pkt_1_waiting :
-		//                               (isValid(pkt_1_word) &&  (down_counter == 0))));
-		//	next_pkt_2_waiting =
-		//		(pkt_2_waiting ? 
-		//			((active_packet != 2)  ? pkt_2_waiting :
-		//                               (isValid(pkt_2_word) &&  (down_counter == 0))));
-		//
-		// 	send_flag = ((next_active_packet == 1) || (next_active_packet == 2));
-		//	word_to_be_sent = ((next_active_packet == 1) ?
-		//			extractWord (pkt_1_word) : extractWord (pkt_2_word));
-		//	if(send_flag)
-		//		out_data_1 := word_to_be_sent		
-		//
-		//	active_packet = next_active_packet;
-		//	down_counter  = next_down_counter;
-		//	pkt_1_waiting = next_pkt_1_waiting
-		//	pkt_2_waiting = next_pkt_2_waiting
-		//	pkt_1_has_priority = next_pkt_1_has_priority
-		// }
-		//
+		// No C-style pseudo code written for this. It is similar to the 2x2 case with minor changes. The major change is in its iteraction with prioritySelect
 		$dopipeline $depth OUTPUT_PORT_PIPELINE_DEPTH 
 			$fullrate 
 
@@ -571,6 +532,14 @@ $module [ outputPort_1_Daemon ]
 						ZERO_2 $on $entry next_priority_index $on $loopback
 
 			$endmerge
+
+			$volatile senderPort := ($excmux
+									read_from_1 0
+									read_from_2 1
+									read_from_3 2
+									read_from_4 3)
+				
+			$call updateCounter (senderPort 0 $zero<1>) (continue)
 
 			//
 			// which words are valid?
@@ -707,6 +676,7 @@ $module [ outputPort_1_Daemon ]
 
 
 
+
 // GENERIC CODE WITH MACROS.
 //
 //   OUTPUTPORTDAEMON
@@ -720,67 +690,7 @@ $module [ outputPort_2_Daemon ]
 	$in () $out () $is
 {
 	$branchblock[loop] {
-		//
-		// pkt_1_waiting = 0;
-		// pkt_2_waiting = 0;
-		// pkt_1_has_priority = 0;
-		// down_counter = 0;
-		// active_packet = 0;
-		// while(1)
-		// {
-		//      read_from_1 = (!pkt_1_waiting || 
-		//                            ((down_counter == 0) || (active_packet == 1)))
-		//      read_from_2 = (!pkt_2_waiting || 
-		//                            ((down_counter == 0) || (active_packet == 2)))
-		//	if(read_from_1)
-		//	{
-		//		// NOTE: must be non-blocking read..  why?
-		//		pkt_1_word = obuf_1_1
-		//	}
-		//      if(read_from_2)
-		// 	{
-		//		// NOTE: must be non-blocking read..  why?
-		//		pkt_2_word = obuf_2_1
-		//	}
-		//
-		//     	selected_packet, next_pkt_1_has_priority = 
-		//		priority_select (down_counter, active_packet,
-		//					pkt_1_has_priority,
-		//					pkt_1_word, 
-		//					pkt_2_word); 
-		//      next_active_packet = 
-		//		($mux (down_counter == 0) selected_packet active_packet)
-		//	next_down_counter = 
-		//		((down_counter == 0)   ?
-		//			pktLength(next_active_packet, pkt_1_word, pkt_2_word) :
-		//			(down_counter - 1));
-		//
-		//	// next packet waiting
-		//           - if pkt is waiting but not active, it stays waiting.
-		//	     - if pkt is waiting but active, stays waiting if valid and down_count==0
-		//	     - if pkt is not waiting, becomes waiting if valid.
-		//	next_pkt_1_waiting =
-		//		(pkt_1_waiting ? 
-		//			((active_packet != 1)  ? pkt_1_waiting :
-		//                               (isValid(pkt_1_word) &&  (down_counter == 0))));
-		//	next_pkt_2_waiting =
-		//		(pkt_2_waiting ? 
-		//			((active_packet != 2)  ? pkt_2_waiting :
-		//                               (isValid(pkt_2_word) &&  (down_counter == 0))));
-		//
-		// 	send_flag = ((next_active_packet == 1) || (next_active_packet == 2));
-		//	word_to_be_sent = ((next_active_packet == 1) ?
-		//			extractWord (pkt_1_word) : extractWord (pkt_2_word));
-		//	if(send_flag)
-		//		out_data_1 := word_to_be_sent		
-		//
-		//	active_packet = next_active_packet;
-		//	down_counter  = next_down_counter;
-		//	pkt_1_waiting = next_pkt_1_waiting
-		//	pkt_2_waiting = next_pkt_2_waiting
-		//	pkt_1_has_priority = next_pkt_1_has_priority
-		// }
-		//
+		// No C-style pseudo code written for this. It is similar to the 2x2 case with minor changes. The major change is in its iteraction with prioritySelect
 		$dopipeline $depth OUTPUT_PORT_PIPELINE_DEPTH 
 			$fullrate 
 
@@ -828,6 +738,14 @@ $module [ outputPort_2_Daemon ]
 						ZERO_2 $on $entry next_priority_index $on $loopback
 
 			$endmerge
+
+			$volatile senderPort := ($excmux
+									read_from_1 0
+									read_from_2 1
+									read_from_3 2
+									read_from_4 3)
+				
+			$call updateCounter (senderPort 1 $zero<1>) (continue)
 
 			//
 			// which words are valid?
@@ -964,6 +882,7 @@ $module [ outputPort_2_Daemon ]
 
 
 
+
 // GENERIC CODE WITH MACROS.
 //
 //   OUTPUTPORTDAEMON
@@ -977,67 +896,7 @@ $module [ outputPort_3_Daemon ]
 	$in () $out () $is
 {
 	$branchblock[loop] {
-		//
-		// pkt_1_waiting = 0;
-		// pkt_2_waiting = 0;
-		// pkt_1_has_priority = 0;
-		// down_counter = 0;
-		// active_packet = 0;
-		// while(1)
-		// {
-		//      read_from_1 = (!pkt_1_waiting || 
-		//                            ((down_counter == 0) || (active_packet == 1)))
-		//      read_from_2 = (!pkt_2_waiting || 
-		//                            ((down_counter == 0) || (active_packet == 2)))
-		//	if(read_from_1)
-		//	{
-		//		// NOTE: must be non-blocking read..  why?
-		//		pkt_1_word = obuf_1_1
-		//	}
-		//      if(read_from_2)
-		// 	{
-		//		// NOTE: must be non-blocking read..  why?
-		//		pkt_2_word = obuf_2_1
-		//	}
-		//
-		//     	selected_packet, next_pkt_1_has_priority = 
-		//		priority_select (down_counter, active_packet,
-		//					pkt_1_has_priority,
-		//					pkt_1_word, 
-		//					pkt_2_word); 
-		//      next_active_packet = 
-		//		($mux (down_counter == 0) selected_packet active_packet)
-		//	next_down_counter = 
-		//		((down_counter == 0)   ?
-		//			pktLength(next_active_packet, pkt_1_word, pkt_2_word) :
-		//			(down_counter - 1));
-		//
-		//	// next packet waiting
-		//           - if pkt is waiting but not active, it stays waiting.
-		//	     - if pkt is waiting but active, stays waiting if valid and down_count==0
-		//	     - if pkt is not waiting, becomes waiting if valid.
-		//	next_pkt_1_waiting =
-		//		(pkt_1_waiting ? 
-		//			((active_packet != 1)  ? pkt_1_waiting :
-		//                               (isValid(pkt_1_word) &&  (down_counter == 0))));
-		//	next_pkt_2_waiting =
-		//		(pkt_2_waiting ? 
-		//			((active_packet != 2)  ? pkt_2_waiting :
-		//                               (isValid(pkt_2_word) &&  (down_counter == 0))));
-		//
-		// 	send_flag = ((next_active_packet == 1) || (next_active_packet == 2));
-		//	word_to_be_sent = ((next_active_packet == 1) ?
-		//			extractWord (pkt_1_word) : extractWord (pkt_2_word));
-		//	if(send_flag)
-		//		out_data_1 := word_to_be_sent		
-		//
-		//	active_packet = next_active_packet;
-		//	down_counter  = next_down_counter;
-		//	pkt_1_waiting = next_pkt_1_waiting
-		//	pkt_2_waiting = next_pkt_2_waiting
-		//	pkt_1_has_priority = next_pkt_1_has_priority
-		// }
-		//
+		// No C-style pseudo code written for this. It is similar to the 2x2 case with minor changes. The major change is in its iteraction with prioritySelect
 		$dopipeline $depth OUTPUT_PORT_PIPELINE_DEPTH 
 			$fullrate 
 
@@ -1085,6 +944,14 @@ $module [ outputPort_3_Daemon ]
 						ZERO_2 $on $entry next_priority_index $on $loopback
 
 			$endmerge
+
+			$volatile senderPort := ($excmux
+									read_from_1 0
+									read_from_2 1
+									read_from_3 2
+									read_from_4 3)
+				
+			$call updateCounter (senderPort 2 $zero<1>) (continue)
 
 			//
 			// which words are valid?
@@ -1221,6 +1088,7 @@ $module [ outputPort_3_Daemon ]
 
 
 
+
 // GENERIC CODE WITH MACROS.
 //
 //   OUTPUTPORTDAEMON
@@ -1234,67 +1102,7 @@ $module [ outputPort_4_Daemon ]
 	$in () $out () $is
 {
 	$branchblock[loop] {
-		//
-		// pkt_1_waiting = 0;
-		// pkt_2_waiting = 0;
-		// pkt_1_has_priority = 0;
-		// down_counter = 0;
-		// active_packet = 0;
-		// while(1)
-		// {
-		//      read_from_1 = (!pkt_1_waiting || 
-		//                            ((down_counter == 0) || (active_packet == 1)))
-		//      read_from_2 = (!pkt_2_waiting || 
-		//                            ((down_counter == 0) || (active_packet == 2)))
-		//	if(read_from_1)
-		//	{
-		//		// NOTE: must be non-blocking read..  why?
-		//		pkt_1_word = obuf_1_1
-		//	}
-		//      if(read_from_2)
-		// 	{
-		//		// NOTE: must be non-blocking read..  why?
-		//		pkt_2_word = obuf_2_1
-		//	}
-		//
-		//     	selected_packet, next_pkt_1_has_priority = 
-		//		priority_select (down_counter, active_packet,
-		//					pkt_1_has_priority,
-		//					pkt_1_word, 
-		//					pkt_2_word); 
-		//      next_active_packet = 
-		//		($mux (down_counter == 0) selected_packet active_packet)
-		//	next_down_counter = 
-		//		((down_counter == 0)   ?
-		//			pktLength(next_active_packet, pkt_1_word, pkt_2_word) :
-		//			(down_counter - 1));
-		//
-		//	// next packet waiting
-		//           - if pkt is waiting but not active, it stays waiting.
-		//	     - if pkt is waiting but active, stays waiting if valid and down_count==0
-		//	     - if pkt is not waiting, becomes waiting if valid.
-		//	next_pkt_1_waiting =
-		//		(pkt_1_waiting ? 
-		//			((active_packet != 1)  ? pkt_1_waiting :
-		//                               (isValid(pkt_1_word) &&  (down_counter == 0))));
-		//	next_pkt_2_waiting =
-		//		(pkt_2_waiting ? 
-		//			((active_packet != 2)  ? pkt_2_waiting :
-		//                               (isValid(pkt_2_word) &&  (down_counter == 0))));
-		//
-		// 	send_flag = ((next_active_packet == 1) || (next_active_packet == 2));
-		//	word_to_be_sent = ((next_active_packet == 1) ?
-		//			extractWord (pkt_1_word) : extractWord (pkt_2_word));
-		//	if(send_flag)
-		//		out_data_1 := word_to_be_sent		
-		//
-		//	active_packet = next_active_packet;
-		//	down_counter  = next_down_counter;
-		//	pkt_1_waiting = next_pkt_1_waiting
-		//	pkt_2_waiting = next_pkt_2_waiting
-		//	pkt_1_has_priority = next_pkt_1_has_priority
-		// }
-		//
+		// No C-style pseudo code written for this. It is similar to the 2x2 case with minor changes. The major change is in its iteraction with prioritySelect
 		$dopipeline $depth OUTPUT_PORT_PIPELINE_DEPTH 
 			$fullrate 
 
@@ -1342,6 +1150,14 @@ $module [ outputPort_4_Daemon ]
 						ZERO_2 $on $entry next_priority_index $on $loopback
 
 			$endmerge
+
+			$volatile senderPort := ($excmux
+									read_from_1 0
+									read_from_2 1
+									read_from_3 2
+									read_from_4 3)
+				
+			$call updateCounter (senderPort 3 $zero<1>) (continue)
 
 			//
 			// which words are valid?

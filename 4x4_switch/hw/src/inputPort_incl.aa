@@ -76,11 +76,15 @@ $module [ ##INPUTPORTDAEMON ]
 
 			// add valid bit for noblock.
 			$volatile data_to_outport := ($concat ONE_1 input_word)
+			
+			$volatile continue := ( $call updateCounter (##PORT_ID (next_last_dest_id - 1) $one<1> $one<1>) )
 
-			$volatile send_to_1 := (next_last_dest_id == 1)
-			$volatile send_to_2 := (next_last_dest_id == 2)
-			$volatile send_to_3 := (next_last_dest_id == 3)
-			$volatile send_to_4 := (next_last_dest_id == 4)
+			$volatile send_to_1 := ((next_last_dest_id == 1) & continue)
+			$volatile send_to_2 := ((next_last_dest_id == 2) & continue)
+			$volatile send_to_3 := ((next_last_dest_id == 3) & continue)
+			$volatile send_to_4 := ((next_last_dest_id == 4) & continue)
+			
+			
 			$guard (send_to_1)
 				##NOBLOCKOBUF_TO_1 := data_to_outport
 
